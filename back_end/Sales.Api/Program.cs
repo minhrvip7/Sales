@@ -12,6 +12,9 @@ builder.Services.AddDatabaseConfiguration(builder.Configuration);
 // Add Dependency Injection (Repositories, Services, Mapper)
 builder.Services.AddDependencyInjection();
 
+// Configure routing to use lowercase URLs
+builder.Services.AddRouting(options => options.LowercaseUrls = true);
+
 // Add Controllers with NewtonsoftJson formatting
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>

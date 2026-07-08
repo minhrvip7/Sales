@@ -4,6 +4,8 @@ import Dashboard from './features/dashboard/Dashboard';
 import ProductList from './features/product/ProductList';
 import OrderList from './features/order/OrderList';
 import CreateOrder from './features/order/CreateOrder';
+import CategoryList from './features/category/CategoryList';
+import UnitList from './features/unit/UnitList';
 
 function App() {
   return (
@@ -12,6 +14,8 @@ function App() {
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="products" element={<ProductList />} />
+          <Route path="categories" element={<CategoryList />} />
+          <Route path="units" element={<UnitList />} />
           <Route path="orders" element={<OrderList />} />
           <Route path="orders/new" element={<CreateOrder />} />
           <Route path="*" element={<Navigate to="/" replace />} />

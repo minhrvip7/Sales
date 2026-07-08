@@ -18,6 +18,8 @@ namespace Sales.Api.Extensions
             // Register Services
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<IOrderService, OrderService>();
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IUnitService, UnitService>();
 
             // Register AutoMapper
             services.AddAutoMapper(typeof(MappingProfile));

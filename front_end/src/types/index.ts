@@ -113,3 +113,15 @@ export interface ApiResponse<T> {
   message: string;
   data: T;
 }
+
+export interface CreateCategoryDto {
+  name: string;
+  code: string;
+  description?: string;
+}
+
+export interface CreateUnitDto {
+  name: string;
+  code: string;
+  description?: string;
+}

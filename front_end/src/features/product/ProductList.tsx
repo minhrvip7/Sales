@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Button, Space, Card, Tag, Modal, Form, Input, InputNumber, message, Row, Col } from 'antd';
+import { Table, Button, Space, Card, Tag, Modal, Form, Input, InputNumber, Select, message, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
   useGetProductsQuery,
@@ -7,15 +7,21 @@ import {
   useUpdateProductMutation,
   useDeleteProductMutation,
 } from '../../services/api/productApi';
+import { useGetCategoriesQuery } from '../../services/api/categoryApi';
+import { useGetUnitsQuery } from '../../services/api/unitApi';
 import type { CreateProductDto, Product } from '../../types';
 
 export const ProductList: React.FC = () => {
   const { data: response, isLoading } = useGetProductsQuery();
+  const { data: categoriesResponse } = useGetCategoriesQuery();
+  const { data: unitsResponse } = useGetUnitsQuery();
   const [createProduct] = useCreateProductMutation();
   const [updateProduct] = useUpdateProductMutation();
   const [deleteProduct] = useDeleteProductMutation();
 
   const products = response?.data || [];
+  const categories = categoriesResponse?.data || [];
+  const units = unitsResponse?.data || [];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -55,7 +61,9 @@ export const ProductList: React.FC = () => {
         }).unwrap();
         message.success('Cập nhật sản phẩm thành công.');
       } else {
-        await createProduct(values as CreateProductDto).unwrap();
+        // Loại bỏ id khỏi payload khi tạo mới, id chỉ dùng khi update
+        const { id: _id, ...createPayload } = values;
+        await createProduct(createPayload as CreateProductDto).unwrap();
         message.success('Thêm sản phẩm thành công.');
       }
       setIsModalOpen(false);
@@ -91,6 +99,16 @@ export const ProductList: React.FC = () => {
       title: 'Tên sản phẩm',
       dataIndex: 'name',
       key: 'name',
+    },
+    {
+      title: 'Nhóm',
+      key: 'categoryName',
+      render: (_: any, record: Product) => record.category?.name || '-',
+    },
+    {
+      title: 'ĐVT',
+      key: 'unitName',
+      render: (_: any, record: Product) => record.unit?.name || '-',
     },
     {
       title: 'Giá bán',
@@ -199,24 +217,34 @@ export const ProductList: React.FC = () => {
             <Input.TextArea rows={3} />
           </Form.Item>
 
-          {/* Hardcode a mock Category and Unit for scaffolding purposes */}
-          <Form.Item
-            name="categoryId"
-            label="Nhóm sản phẩm"
-            initialValue="00000000-0000-0000-0000-000000000000"
-            hidden
-          >
-            <Input />
-          </Form.Item>
-          
-          <Form.Item
-            name="unitId"
-            label="Đơn vị tính"
-            initialValue="00000000-0000-0000-0000-000000000000"
-            hidden
-          >
-            <Input />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="categoryId"
+                label="Nhóm sản phẩm"
+                rules={[{ required: true, message: 'Vui lòng chọn nhóm sản phẩm' }]}
+              >
+                <Select placeholder="Chọn nhóm">
+                  {categories.map(c => (
+                    <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="unitId"
+                label="Đơn vị tính"
+                rules={[{ required: true, message: 'Vui lòng chọn đơn vị tính' }]}
+              >
+                <Select placeholder="Chọn đơn vị">
+                  {units.map(u => (
+                    <Select.Option key={u.id} value={u.id}>{u.name}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Space>

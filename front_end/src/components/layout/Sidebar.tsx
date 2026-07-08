@@ -5,6 +5,8 @@ import {
   ShoppingOutlined,
   ShoppingCartOutlined,
   PlusCircleOutlined,
+  AppstoreOutlined,
+  BlockOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -28,6 +30,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       key: '/products',
       icon: <ShoppingOutlined />,
       label: 'Sản phẩm',
+    },
+    {
+      key: '/categories',
+      icon: <AppstoreOutlined />,
+      label: 'Nhóm sản phẩm',
+    },
+    {
+      key: '/units',
+      icon: <BlockOutlined />,
+      label: 'Đơn vị tính',
     },
     {
       key: '/orders',

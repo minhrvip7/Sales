@@ -1,0 +1,97 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using AutoMapper;
+using Sales.Application.DTOs.Unit;
+using Sales.Application.IServices;
+using Sales.Domain.Entities.Product;
+using Sales.Domain.IRepositories;
+
+namespace Sales.Application.Services
+{
+    public class UnitService : IUnitService
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+
+        public UnitService(IUnitOfWork unitOfWork, IMapper mapper)
+        {
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
+        }
+
+        public async Task<IEnumerable<UnitDto>> GetAllUnitsAsync()
+        {
+            var units = await _unitOfWork.Repository<Unit>().GetAsync();
+            return _mapper.Map<IEnumerable<UnitDto>>(units);
+        }
+
+        public async Task<UnitDto> GetUnitByIdAsync(Guid id)
+        {
+            var unit = await _unitOfWork.Repository<Unit>().FirstOrDefaultAsync(u => u.Id == id);
+            if (unit == null)
+            {
+                throw new KeyNotFoundException($"Không tìm thấy đơn vị tính với Id: {id}");
+            }
+            return _mapper.Map<UnitDto>(unit);
+        }
+
+        public async Task<UnitDto> CreateUnitAsync(CreateUnitDto dto)
+        {
+            // Check if code already exists
+            var existing = await _unitOfWork.Repository<Unit>().FirstOrDefaultAsync(u => u.Code == dto.Code);
+            if (existing != null)
+            {
+                throw new ArgumentException($"Mã đơn vị tính '{dto.Code}' đã tồn tại.");
+            }
+
+            var unit = _mapper.Map<Unit>(dto);
+            await _unitOfWork.Repository<Unit>().InsertAsync(unit);
+            await _unitOfWork.SaveChangesAsync();
+            return _mapper.Map<UnitDto>(unit);
+        }
+
+        public async Task<bool> UpdateUnitAsync(Guid id, CreateUnitDto dto)
+        {
+            var unit = await _unitOfWork.Repository<Unit>().FirstOrDefaultAsync(u => u.Id == id);
+            if (unit == null)
+            {
+                throw new KeyNotFoundException($"Không tìm thấy đơn vị tính với Id: {id}");
+            }
+
+            // Check if code already exists for another unit
+            var existing = await _unitOfWork.Repository<Unit>().FirstOrDefaultAsync(u => u.Code == dto.Code && u.Id != id);
+            if (existing != null)
+            {
+                throw new ArgumentException($"Mã đơn vị tính '{dto.Code}' đã được sử dụng bởi đơn vị khác.");
+            }
+
+            _mapper.Map(dto, unit);
+            unit.UpdatedDate = DateTime.UtcNow;
+
+            _unitOfWork.Repository<Unit>().Update(unit);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteUnitAsync(Guid id)
+        {
+            var unit = await _unitOfWork.Repository<Unit>().FirstOrDefaultAsync(u => u.Id == id);
+            if (unit == null)
+            {
+                throw new KeyNotFoundException($"Không tìm thấy đơn vị tính với Id: {id}");
+            }
+
+            // Check if there are any products in this unit
+            var productsCount = await _unitOfWork.Repository<Product>().CountAsync(p => p.UnitId == id);
+            if (productsCount > 0)
+            {
+                throw new InvalidOperationException("Không thể xóa đơn vị tính này vì vẫn còn sản phẩm sử dụng đơn vị tính.");
+            }
+
+            _unitOfWork.Repository<Unit>().Delete(unit);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+    }
+}
