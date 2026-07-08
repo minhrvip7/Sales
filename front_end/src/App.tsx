@@ -1,0 +1,24 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import MainLayout from './components/layout/MainLayout';
+import Dashboard from './features/dashboard/Dashboard';
+import ProductList from './features/product/ProductList';
+import OrderList from './features/order/OrderList';
+import CreateOrder from './features/order/CreateOrder';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="products" element={<ProductList />} />
+          <Route path="orders" element={<OrderList />} />
+          <Route path="orders/new" element={<CreateOrder />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
