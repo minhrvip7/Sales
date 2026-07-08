@@ -11,6 +11,9 @@ interface SelectedItem {
   product: Product;
   quantity: number;
   discountPercentage: number;
+  selectedUnitId: string;
+  conversionRate: number;
+  unitPrice: number;
 }
 
 export const CreateOrder: React.FC = () => {
@@ -24,7 +27,7 @@ export const CreateOrder: React.FC = () => {
 
   // Calculate totals
   const subTotal = selectedItems.reduce((sum, item) => {
-    const itemSubtotal = item.quantity * item.product.price;
+    const itemSubtotal = item.quantity * item.unitPrice;
     const discount = itemSubtotal * (item.discountPercentage / 100);
     return sum + (itemSubtotal - discount);
   }, 0);
@@ -45,8 +48,10 @@ export const CreateOrder: React.FC = () => {
     // Check if already added
     const existing = selectedItems.find(item => item.key === productId);
     if (existing) {
-      if (existing.quantity >= product.stockQuantity) {
-        message.error(`Không thể thêm. Tồn kho tối đa của sản phẩm này là ${product.stockQuantity}.`);
+      const addedBaseQty = existing.conversionRate;
+      const currentBaseQty = existing.quantity * existing.conversionRate;
+      if (currentBaseQty + addedBaseQty > product.stockQuantity) {
+        message.error(`Không thể thêm. Tồn kho tối đa của sản phẩm này là ${product.stockQuantity} ${product.baseUnit?.name || 'Lon'}.`);
         return;
       }
       setSelectedItems(selectedItems.map(item => 
@@ -57,9 +62,127 @@ export const CreateOrder: React.FC = () => {
         key: productId,
         product,
         quantity: 1,
-        discountPercentage: 0
+        discountPercentage: 0,
+        selectedUnitId: product.baseUnitId,
+        conversionRate: 1,
+        unitPrice: product.price
       }]);
     }
+  };
+
+  const handleBarcodeScan = (barcode: string) => {
+    if (!barcode) return;
+    let foundProduct: Product | undefined;
+    let foundUnitId: string | undefined;
+    let conversionRate = 1;
+    let unitPrice = 0;
+
+    for (const p of products) {
+      if (p.barcode === barcode) {
+        foundProduct = p;
+        foundUnitId = p.baseUnitId;
+        conversionRate = 1;
+        unitPrice = p.price;
+        break;
+      }
+      const conv = p.conversions?.find(c => c.barcode === barcode);
+      if (conv) {
+        foundProduct = p;
+        foundUnitId = conv.alternativeUnitId;
+        conversionRate = conv.conversionRate;
+        unitPrice = conv.price !== null && conv.price !== undefined ? conv.price : (p.price * conv.conversionRate);
+        break;
+      }
+    }
+
+    if (!foundProduct) {
+      message.error(`Không tìm thấy sản phẩm với mã vạch: ${barcode}`);
+      return;
+    }
+
+    if (foundProduct.stockQuantity < conversionRate) {
+      message.error(`Sản phẩm '${foundProduct.name}' không đủ tồn kho.`);
+      return;
+    }
+
+    const existing = selectedItems.find(item => item.key === foundProduct!.id);
+    if (existing) {
+      const targetUnitId = foundUnitId!;
+      const targetRate = conversionRate;
+      const targetPrice = unitPrice;
+
+      const isSameUnit = existing.selectedUnitId === targetUnitId;
+      const newQty = isSameUnit ? existing.quantity + 1 : 1;
+      const requiredBaseQty = newQty * targetRate;
+
+      if (requiredBaseQty > foundProduct.stockQuantity) {
+        message.error(`Không đủ tồn kho (Yêu cầu quy đổi: ${requiredBaseQty} ${foundProduct.baseUnit?.name}, hiện có: ${foundProduct.stockQuantity}).`);
+        return;
+      }
+
+      setSelectedItems(selectedItems.map(item => 
+        item.key === foundProduct!.id 
+          ? { ...item, selectedUnitId: targetUnitId, conversionRate: targetRate, unitPrice: targetPrice, quantity: newQty } 
+          : item
+      ));
+      message.success(`Đã thêm 1 ${isSameUnit ? '' : (foundProduct.conversions?.find(c => c.alternativeUnitId === targetUnitId)?.alternativeUnitName || 'đơn vị mới')} sản phẩm ${foundProduct.name}.`);
+    } else {
+      setSelectedItems([...selectedItems, {
+        key: foundProduct.id,
+        product: foundProduct,
+        quantity: 1,
+        discountPercentage: 0,
+        selectedUnitId: foundUnitId!,
+        conversionRate,
+        unitPrice
+      }]);
+      message.success(`Đã thêm sản phẩm ${foundProduct.name} vào giỏ.`);
+    }
+  };
+
+  const handleUnitChange = (productId: string, unitId: string) => {
+    setSelectedItems(selectedItems.map(item => {
+      if (item.key !== productId) return item;
+
+      const product = item.product;
+      let conversionRate = 1;
+      let unitPrice = product.price;
+
+      if (unitId === product.baseUnitId) {
+        conversionRate = 1;
+        unitPrice = product.price;
+      } else {
+        const conv = product.conversions?.find(c => c.alternativeUnitId === unitId);
+        if (conv) {
+          conversionRate = conv.conversionRate;
+          unitPrice = conv.price !== null && conv.price !== undefined ? conv.price : (product.price * conv.conversionRate);
+        }
+      }
+
+      const requiredBaseQty = item.quantity * conversionRate;
+      if (requiredBaseQty > product.stockQuantity) {
+        const maxQty = Math.floor(product.stockQuantity / conversionRate);
+        if (maxQty <= 0) {
+          message.error(`Không đủ tồn kho để chuyển sang đơn vị này (Tồn kho: ${product.stockQuantity} ${product.baseUnit?.name || 'Lon'}).`);
+          return item;
+        }
+        message.warning(`Số lượng được điều chỉnh giảm xuống ${maxQty} để vừa với tồn kho tối đa.`);
+        return {
+          ...item,
+          selectedUnitId: unitId,
+          conversionRate,
+          unitPrice,
+          quantity: maxQty
+        };
+      }
+
+      return {
+        ...item,
+        selectedUnitId: unitId,
+        conversionRate,
+        unitPrice
+      };
+    }));
   };
 
   const handleRemoveItem = (productId: string) => {
@@ -68,16 +191,17 @@ export const CreateOrder: React.FC = () => {
 
   const handleQuantityChange = (productId: string, value: number | null) => {
     if (value === null || value <= 0) return;
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
+    const item = selectedItems.find(it => it.key === productId);
+    if (!item) return;
 
-    if (value > product.stockQuantity) {
-      message.error(`Sản phẩm này chỉ còn ${product.stockQuantity} trong kho.`);
+    const requiredBaseQty = value * item.conversionRate;
+    if (requiredBaseQty > item.product.stockQuantity) {
+      message.error(`Sản phẩm này chỉ còn ${item.product.stockQuantity} ${item.product.baseUnit?.name || 'Lon'} trong kho (Yêu cầu: ${requiredBaseQty}).`);
       return;
     }
 
-    setSelectedItems(selectedItems.map(item => 
-      item.key === productId ? { ...item, quantity: value } : item
+    setSelectedItems(selectedItems.map(it => 
+      it.key === productId ? { ...it, quantity: value } : it
     ));
   };
 
@@ -96,6 +220,7 @@ export const CreateOrder: React.FC = () => {
 
     const orderDetails: CreateOrderDetailDto[] = selectedItems.map(item => ({
       productId: item.product.id,
+      unitId: item.selectedUnitId,
       quantity: item.quantity,
       discountPercentage: item.discountPercentage
     }));
@@ -129,9 +254,29 @@ export const CreateOrder: React.FC = () => {
     },
     {
       title: 'Đơn giá',
-      dataIndex: ['product', 'price'],
       key: 'price',
-      render: (_: any, record: SelectedItem) => `${record.product.price.toLocaleString('vi-VN')} ₫`,
+      render: (_: any, record: SelectedItem) => `${record.unitPrice.toLocaleString('vi-VN')} ₫`,
+    },
+    {
+      title: 'Đơn vị tính',
+      key: 'unit',
+      render: (_: any, record: SelectedItem) => {
+        const options = [
+          { value: record.product.baseUnitId, label: record.product.baseUnit?.name || 'Lon' },
+          ...(record.product.conversions || []).map(c => ({
+            value: c.alternativeUnitId,
+            label: c.alternativeUnitName || 'Quy đổi'
+          }))
+        ];
+        return (
+          <Select
+            value={record.selectedUnitId}
+            style={{ width: 110 }}
+            onChange={(val) => handleUnitChange(record.product.id, val)}
+            options={options}
+          />
+        );
+      }
     },
     {
       title: 'Số lượng',
@@ -139,7 +284,7 @@ export const CreateOrder: React.FC = () => {
       render: (_: any, record: SelectedItem) => (
         <InputNumber
           min={1}
-          max={record.product.stockQuantity}
+          max={Math.floor(record.product.stockQuantity / record.conversionRate)}
           value={record.quantity}
           onChange={(val) => handleQuantityChange(record.product.id, val)}
         />
@@ -161,7 +306,7 @@ export const CreateOrder: React.FC = () => {
       title: 'Thành tiền',
       key: 'total',
       render: (_: any, record: SelectedItem) => {
-        const itemSubtotal = record.quantity * record.product.price;
+        const itemSubtotal = record.quantity * record.unitPrice;
         const discount = itemSubtotal * (record.discountPercentage / 100);
         return <strong>{(itemSubtotal - discount).toLocaleString('vi-VN')} ₫</strong>;
       },
@@ -188,6 +333,13 @@ export const CreateOrder: React.FC = () => {
         <Row gutter={24}>
           <Col xs={24} lg={16}>
             <Card title="Chọn sản phẩm" bordered={false} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '24px' }}>
+              <Input.Search
+                placeholder="Quét mã vạch sản phẩm hoặc đơn vị quy đổi..."
+                enterButton="Thêm"
+                onSearch={handleBarcodeScan}
+                style={{ width: '100%', marginBottom: '16px' }}
+              />
+
               <Select
                 showSearch
                 placeholder="Tìm sản phẩm theo tên hoặc mã..."
@@ -198,7 +350,7 @@ export const CreateOrder: React.FC = () => {
               >
                 {products.map(p => (
                   <Select.Option key={p.id} value={p.id} disabled={p.stockQuantity <= 0}>
-                    {p.name} - Mã: {p.code} (Còn lại: {p.stockQuantity} {p.unit?.name || 'Cái'}) - Giá: {p.price.toLocaleString('vi-VN')} ₫
+                    {p.name} - Mã: {p.code} (Còn lại: {p.stockQuantity} {p.baseUnit?.name || 'Cái'}) - Giá: {p.price.toLocaleString('vi-VN')} ₫
                   </Select.Option>
                 ))}
               </Select>

@@ -3,9 +3,13 @@ using System.Threading.Tasks;
 using Sales.Application.DTOs.Product;
 using Sales.Application.IServices;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Sales.Api.Controllers
 {
+    /// <summary>
+    /// Quản lý sản phẩm hàng hóa: thêm, sửa, xóa, tra cứu sản phẩm và cấu hình đơn vị tính phụ.
+    /// </summary>
     public class ProductController : BaseController
     {
         private readonly IProductService _productService;
@@ -15,35 +19,71 @@ namespace Sales.Api.Controllers
             _productService = productService;
         }
 
+        /// <summary>Lấy danh sách tất cả sản phẩm.</summary>
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Lấy danh sách sản phẩm",
+            Description = "Trả về toàn bộ sản phẩm trong hệ thống bao gồm thông tin nhóm hàng, đơn vị tính cơ bản, tồn kho và danh sách quy đổi đơn vị tính phụ."
+        )]
+        [SwaggerResponse(200, "Lấy danh sách sản phẩm thành công.")]
         public async Task<IActionResult> GetAll()
         {
             var result = await _productService.GetAllProductsAsync();
             return OkResponse(result, "Lấy danh sách sản phẩm thành công.");
         }
 
+        /// <summary>Lấy thông tin chi tiết một sản phẩm theo ID.</summary>
         [HttpGet("{id}")]
+        [SwaggerOperation(
+            Summary = "Lấy chi tiết sản phẩm",
+            Description = "Trả về thông tin đầy đủ của sản phẩm theo ID, bao gồm giá bán, giá vốn, tồn kho, nhóm hàng, đơn vị tính cơ bản và toàn bộ cấu hình quy đổi đơn vị tính phụ."
+        )]
+        [SwaggerResponse(200, "Lấy thông tin sản phẩm thành công.")]
+        [SwaggerResponse(404, "Không tìm thấy sản phẩm với ID đã cho.")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _productService.GetProductByIdAsync(id);
             return OkResponse(result, "Lấy thông tin sản phẩm thành công.");
         }
 
+        /// <summary>Tạo mới một sản phẩm.</summary>
         [HttpPost]
+        [SwaggerOperation(
+            Summary = "Tạo sản phẩm mới",
+            Description = "Thêm một sản phẩm mới vào hệ thống. Mã sản phẩm (Code) phải duy nhất. Có thể kèm theo cấu hình đơn vị tính phụ trong field Conversions."
+        )]
+        [SwaggerResponse(200, "Tạo sản phẩm thành công. Trả về thông tin sản phẩm vừa tạo.")]
+        [SwaggerResponse(400, "Dữ liệu đầu vào không hợp lệ hoặc mã sản phẩm đã tồn tại.")]
         public async Task<IActionResult> Create([FromBody] CreateProductDto dto)
         {
             var result = await _productService.CreateProductAsync(dto);
             return OkResponse(result, "Tạo sản phẩm thành công.");
         }
 
+        /// <summary>Cập nhật thông tin sản phẩm.</summary>
         [HttpPut("{id}")]
+        [SwaggerOperation(
+            Summary = "Cập nhật sản phẩm",
+            Description = "Cập nhật thông tin sản phẩm theo ID. Toàn bộ dữ liệu sản phẩm sẽ được ghi đè theo body request, bao gồm cả danh sách quy đổi đơn vị tính phụ."
+        )]
+        [SwaggerResponse(200, "Cập nhật thông tin sản phẩm thành công.")]
+        [SwaggerResponse(400, "Dữ liệu đầu vào không hợp lệ.")]
+        [SwaggerResponse(404, "Không tìm thấy sản phẩm với ID đã cho.")]
         public async Task<IActionResult> Update(Guid id, [FromBody] CreateProductDto dto)
         {
             await _productService.UpdateProductAsync(id, dto);
             return SuccessResponse("Cập nhật thông tin sản phẩm thành công.");
         }
 
+        /// <summary>Xóa sản phẩm.</summary>
         [HttpDelete("{id}")]
+        [SwaggerOperation(
+            Summary = "Xóa sản phẩm",
+            Description = "Xóa sản phẩm khỏi hệ thống theo ID. Không thể xóa sản phẩm đã xuất hiện trong đơn hàng (HasTransactions = true). Trong trường hợp đó, hãy đặt Status = false để ngừng kinh doanh thay vì xóa."
+        )]
+        [SwaggerResponse(200, "Xóa sản phẩm thành công.")]
+        [SwaggerResponse(400, "Không thể xóa sản phẩm đã có giao dịch.")]
+        [SwaggerResponse(404, "Không tìm thấy sản phẩm với ID đã cho.")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _productService.DeleteProductAsync(id);
@@ -51,4 +91,3 @@ namespace Sales.Api.Controllers
         }
     }
 }
-

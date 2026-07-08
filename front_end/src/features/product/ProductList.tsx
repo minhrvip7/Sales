@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Button, Space, Card, Tag, Modal, Form, Input, InputNumber, Select, message, Row, Col } from 'antd';
+import { Table, Button, Space, Card, Tag, Modal, Form, Input, InputNumber, Select, message, Row, Col, Divider } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
   useGetProductsQuery,
@@ -37,9 +37,9 @@ export const ProductList: React.FC = () => {
         price: product.price,
         cost: product.cost,
         description: product.description,
-        // Mock default category/unit ids if none exist
         categoryId: product.categoryId,
-        unitId: product.unitId,
+        baseUnitId: product.baseUnitId,
+        conversions: product.conversions || [],
       });
     } else {
       setEditingProduct(null);
@@ -108,7 +108,7 @@ export const ProductList: React.FC = () => {
     {
       title: 'ĐVT',
       key: 'unitName',
-      render: (_: any, record: Product) => record.unit?.name || '-',
+      render: (_: any, record: Product) => record.baseUnit?.name || '-',
     },
     {
       title: 'Giá bán',
@@ -233,11 +233,12 @@ export const ProductList: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="unitId"
+                name="baseUnitId"
                 label="Đơn vị tính"
                 rules={[{ required: true, message: 'Vui lòng chọn đơn vị tính' }]}
+                extra={editingProduct?.hasTransactions ? <span style={{ color: 'orange', fontSize: '12px' }}>Đã có giao dịch, không thể sửa đơn vị tính cơ bản.</span> : null}
               >
-                <Select placeholder="Chọn đơn vị">
+                <Select placeholder="Chọn đơn vị" disabled={editingProduct?.hasTransactions}>
                   {units.map(u => (
                     <Select.Option key={u.id} value={u.id}>{u.name}</Select.Option>
                   ))}
@@ -245,6 +246,54 @@ export const ProductList: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
+
+          <Divider orientation="left" style={{ margin: '12px 0' }}>Đơn vị quy đổi</Divider>
+          <Form.List name="conversions">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name, ...restField }) => (
+                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'alternativeUnitId']}
+                      rules={[{ required: true, message: 'Chọn đơn vị' }]}
+                    >
+                      <Select placeholder="Đơn vị" style={{ width: 130 }}>
+                        {units.map(u => (
+                          <Select.Option key={u.id} value={u.id}>{u.name}</Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'conversionRate']}
+                      rules={[{ required: true, message: 'Nhập hệ số' }]}
+                    >
+                      <InputNumber placeholder="Hệ số (>0)" min={0.0001} style={{ width: 100 }} />
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'barcode']}
+                    >
+                      <Input placeholder="Mã vạch riêng" style={{ width: 120 }} />
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'price']}
+                    >
+                      <InputNumber placeholder="Giá bán (₫)" min={0} style={{ width: 120 }} />
+                    </Form.Item>
+                    <Button type="text" danger onClick={() => remove(name)} icon={<DeleteOutlined />} />
+                  </Space>
+                ))}
+                <Form.Item>
+                  <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                    Thêm Đơn vị quy đổi
+                  </Button>
+                </Form.Item>
+              </>
+            )}
+          </Form.List>
 
           <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Space>

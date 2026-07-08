@@ -25,7 +25,33 @@ builder.Services.AddControllers()
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Evo Sales API",
+        Version = "v1",
+        Description = "API quản lý bán hàng: sản phẩm, nhóm hàng, đơn vị tính, đơn hàng và khách hàng."
+    });
+
+    // Bật hỗ trợ [SwaggerOperation], [SwaggerResponse] attribute
+    c.EnableAnnotations();
+
+    // Load XML comment từ Sales.Api
+    var apiXml = Path.Combine(AppContext.BaseDirectory, "Sales.Api.xml");
+    if (File.Exists(apiXml)) c.IncludeXmlComments(apiXml);
+
+    // Load XML comment từ Sales.Application (DTOs)
+    var appXml = Path.Combine(AppContext.BaseDirectory, "Sales.Application.xml");
+    if (File.Exists(appXml)) c.IncludeXmlComments(appXml);
+
+    // Load XML comment từ Sales.Domain (Entities, Enums)
+    var domainXml = Path.Combine(AppContext.BaseDirectory, "Sales.Domain.xml");
+    if (File.Exists(domainXml)) c.IncludeXmlComments(domainXml);
+
+    // Hiển thị enum dưới dạng tên string + mô tả thay vì số nguyên
+    c.UseInlineDefinitionsForEnums();
+});
 
 // Add CORS Policy
 builder.Services.AddCors(options =>

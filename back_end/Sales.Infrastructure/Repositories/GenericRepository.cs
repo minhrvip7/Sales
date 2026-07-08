@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Sales.Domain.Interfaces;
 using Sales.Domain.IRepositories;
 using Sales.Infrastructure.DataContext;
 using Microsoft.EntityFrameworkCore;
@@ -35,9 +36,16 @@ namespace Sales.Infrastructure.Repositories
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = "",
             int offset = 0,
-            int limit = -1)
+            int limit = -1,
+            bool ignoreQueryFilters = false)
         {
             IQueryable<TEntity> query = DbSet;
+
+            // Bỏ qua Global Query Filter (ví dụ: IsDeleted) khi cần xem lịch sử/báo cáo
+            if (ignoreQueryFilters)
+            {
+                query = query.IgnoreQueryFilters();
+            }
 
             if (filter != null)
             {
@@ -70,9 +78,16 @@ namespace Sales.Infrastructure.Repositories
 
         public virtual async Task<TEntity> FirstOrDefaultAsync(
             Expression<Func<TEntity, bool>> filter = null,
-            string includeProperties = "")
+            string includeProperties = "",
+            bool ignoreQueryFilters = false)
         {
             IQueryable<TEntity> query = DbSet;
+
+            // Bỏ qua Global Query Filter khi cần xem lịch sử/báo cáo
+            if (ignoreQueryFilters)
+            {
+                query = query.IgnoreQueryFilters();
+            }
 
             if (filter != null)
             {
@@ -121,19 +136,38 @@ namespace Sales.Infrastructure.Repositories
             }
         }
 
+        /// <summary>
+        /// Xóa mềm nếu entity implement ISoftDelete, ngược lại xóa vật lý.
+        /// </summary>
         public virtual void Delete(TEntity entityToDelete)
         {
-            if (Context.Entry(entityToDelete).State == EntityState.Detached)
+            if (entityToDelete is ISoftDelete softEntity)
             {
-                DbSet.Attach(entityToDelete);
+                // Soft delete: chỉ đánh dấu IsDeleted = true, không xóa thật
+                softEntity.IsDeleted = true;
+                softEntity.DeletedDate = DateTime.UtcNow;
+                Update(entityToDelete);
             }
-            DbSet.Remove(entityToDelete);
+            else
+            {
+                // Hard delete fallback cho entity không implement ISoftDelete
+                if (Context.Entry(entityToDelete).State == EntityState.Detached)
+                {
+                    DbSet.Attach(entityToDelete);
+                }
+                DbSet.Remove(entityToDelete);
+            }
         }
 
+        /// <summary>
+        /// Xóa mềm nhiều entity cùng lúc nếu implement ISoftDelete.
+        /// </summary>
         public virtual void DeleteRange(IEnumerable<TEntity> entities)
         {
-            DbSet.RemoveRange(entities);
+            foreach (var entity in entities)
+            {
+                Delete(entity);
+            }
         }
     }
 }
-

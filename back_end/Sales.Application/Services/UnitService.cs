@@ -82,11 +82,18 @@ namespace Sales.Application.Services
                 throw new KeyNotFoundException($"Không tìm thấy đơn vị tính với Id: {id}");
             }
 
-            // Check if there are any products in this unit
-            var productsCount = await _unitOfWork.Repository<Product>().CountAsync(p => p.UnitId == id);
+            // Check if there are any products in this unit as base unit
+            var productsCount = await _unitOfWork.Repository<Product>().CountAsync(p => p.BaseUnitId == id);
             if (productsCount > 0)
             {
-                throw new InvalidOperationException("Không thể xóa đơn vị tính này vì vẫn còn sản phẩm sử dụng đơn vị tính.");
+                throw new InvalidOperationException("Không thể xóa đơn vị tính này vì vẫn còn sản phẩm sử dụng đơn vị tính làm đơn vị cơ bản.");
+            }
+
+            // Check if there are any products in this unit as alternative unit
+            var conversionsCount = await _unitOfWork.Repository<ProductUnitConversion>().CountAsync(c => c.AlternativeUnitId == id);
+            if (conversionsCount > 0)
+            {
+                throw new InvalidOperationException("Không thể xóa đơn vị tính này vì vẫn còn sản phẩm sử dụng làm đơn vị quy đổi.");
             }
 
             _unitOfWork.Repository<Unit>().Delete(unit);

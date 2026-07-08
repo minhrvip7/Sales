@@ -15,13 +15,21 @@ namespace Sales.Application.Mappings
             // Product mappings
             CreateMap<Product, ProductDto>()
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
-                .ForMember(dest => dest.UnitName, opt => opt.MapFrom(src => src.Unit.Name));
+                .ForMember(dest => dest.BaseUnitName, opt => opt.MapFrom(src => src.BaseUnit.Name))
+                .ForMember(dest => dest.Conversions, opt => opt.MapFrom(src => src.Conversions));
             
             CreateMap<CreateProductDto, Product>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => true))
                 .ForMember(dest => dest.CreatedDate, opt => opt.MapFrom(_ => DateTime.UtcNow))
-                .ForMember(dest => dest.StockQuantity, opt => opt.MapFrom(_ => 0));
+                .ForMember(dest => dest.StockQuantity, opt => opt.MapFrom(_ => 0))
+                .ForMember(dest => dest.Conversions, opt => opt.Ignore());
+
+            CreateMap<ProductUnitConversion, ProductUnitConversionDto>()
+                .ForMember(dest => dest.AlternativeUnitName, opt => opt.MapFrom(src => src.AlternativeUnit.Name));
+
+            CreateMap<ProductUnitConversionDto, ProductUnitConversion>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()));
 
             // Order mappings
             CreateMap<Order, OrderDto>()
@@ -29,7 +37,8 @@ namespace Sales.Application.Mappings
             
             CreateMap<OrderDetail, OrderDetailDto>()
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.Name))
-                .ForMember(dest => dest.ProductCode, opt => opt.MapFrom(src => src.Product.Code));
+                .ForMember(dest => dest.ProductCode, opt => opt.MapFrom(src => src.Product.Code))
+                .ForMember(dest => dest.UnitName, opt => opt.MapFrom(src => src.Unit.Name));
 
             // Category mappings
             CreateMap<Category, CategoryDto>();

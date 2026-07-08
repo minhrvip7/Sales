@@ -39,6 +39,14 @@ export interface Unit {
   createdDate: string;
 }
 
+export interface ProductUnitConversion {
+  alternativeUnitId: string;
+  alternativeUnitName?: string;
+  conversionRate: number;
+  barcode?: string;
+  price?: number;
+}
+
 export interface CreateProductDto {
   name: string;
   code: string;
@@ -47,7 +55,8 @@ export interface CreateProductDto {
   price: number;
   cost: number;
   categoryId: string;
-  unitId: string;
+  baseUnitId: string;
+  conversions: ProductUnitConversion[];
 }
 
 export interface Product {
@@ -61,10 +70,12 @@ export interface Product {
   stockQuantity: number;
   categoryId: string;
   category?: Category;
-  unitId: string;
-  unit?: Unit;
+  baseUnitId: string;
+  baseUnit?: Unit;
   status: boolean;
   createdDate: string;
+  hasTransactions: boolean;
+  conversions: ProductUnitConversion[];
 }
 
 export interface OrderDetail {
@@ -72,6 +83,9 @@ export interface OrderDetail {
   orderId?: string;
   productId: string;
   product?: Product;
+  unitId: string;
+  unit?: Unit;
+  conversionRate: number;
   quantity: number;
   unitPrice: number;
   discountPercentage: number;

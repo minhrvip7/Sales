@@ -8,6 +8,7 @@ using Sales.Application.IServices;
 using Sales.Domain.Entities.Customer;
 using Sales.Domain.Entities.Order;
 using Sales.Domain.Entities.Product;
+using Sales.Domain.Enums;
 using Sales.Domain.IRepositories;
 
 namespace Sales.Application.Services
@@ -26,7 +27,8 @@ namespace Sales.Application.Services
         public async Task<IEnumerable<OrderDto>> GetAllOrdersAsync()
         {
             var orders = await _unitOfWork.Repository<Order>().GetAsync(
-                includeProperties: "Customer,OrderDetails.Product");
+                includeProperties: "Customer,OrderDetails.Product,OrderDetails.Unit",
+                ignoreQueryFilters: true); // Bypass filter để lịch sử hiển thị cả sản phẩm/khách hàng đã xóa mềm
             return _mapper.Map<IEnumerable<OrderDto>>(orders);
         }
 
@@ -34,7 +36,8 @@ namespace Sales.Application.Services
         {
             var order = await _unitOfWork.Repository<Order>().FirstOrDefaultAsync(
                 filter: o => o.Id == id,
-                includeProperties: "Customer,OrderDetails.Product");
+                includeProperties: "Customer,OrderDetails.Product,OrderDetails.Unit",
+                ignoreQueryFilters: true); // Bypass filter để chi tiết đơn hàng luôn hiển thị đầy đủ
 
             if (order == null)
             {
@@ -63,8 +66,8 @@ namespace Sales.Application.Services
                 Id = Guid.NewGuid(),
                 CustomerId = dto.CustomerId,
                 OrderDate = DateTime.UtcNow,
-                OrderStatus = 1, // Confirmed
-                PaymentStatus = 0, // Unpaid
+                OrderStatus = OrderStatus.Confirmed,
+                PaymentStatus = PaymentStatus.Unpaid,
                 Notes = dto.Notes,
                 CreatedDate = DateTime.UtcNow,
                 OrderNumber = $"SO-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(1000, 9999)}"
@@ -75,22 +78,52 @@ namespace Sales.Application.Services
 
             foreach (var itemDto in dto.OrderDetails)
             {
-                var product = await _unitOfWork.Repository<Product>().FirstOrDefaultAsync(p => p.Id == itemDto.ProductId);
+                var product = await _unitOfWork.Repository<Product>().FirstOrDefaultAsync(
+                    filter: p => p.Id == itemDto.ProductId,
+                    includeProperties: "Conversions");
                 if (product == null)
                 {
                     throw new ArgumentException($"Không tìm thấy sản phẩm với Id: {itemDto.ProductId}");
                 }
 
-                if (product.StockQuantity < itemDto.Quantity)
+                // Verify Selected Unit is valid for this product
+                decimal conversionRate = 1;
+                decimal unitPrice = product.Price;
+
+                if (itemDto.UnitId == product.BaseUnitId)
                 {
-                    throw new InvalidOperationException($"Sản phẩm '{product.Name}' không đủ hàng trong kho (Còn {product.StockQuantity}, yêu cầu {itemDto.Quantity}).");
+                    conversionRate = 1;
+                    unitPrice = product.Price;
+                }
+                else
+                {
+                    var conversion = product.Conversions.FirstOrDefault(c => c.AlternativeUnitId == itemDto.UnitId);
+                    if (conversion == null)
+                    {
+                        throw new ArgumentException($"Đơn vị tính được chọn không hợp lệ cho sản phẩm '{product.Name}'.");
+                    }
+                    conversionRate = conversion.ConversionRate;
+                    unitPrice = conversion.Price ?? (product.Price * conversion.ConversionRate);
+                }
+
+                // Verify Unit exists
+                var unit = await _unitOfWork.Repository<Unit>().FirstOrDefaultAsync(u => u.Id == itemDto.UnitId);
+                if (unit == null)
+                {
+                    throw new ArgumentException($"Không tìm thấy đơn vị tính với Id: {itemDto.UnitId}");
+                }
+
+                int requiredBaseQty = (int)Math.Round(itemDto.Quantity * conversionRate);
+
+                if (product.StockQuantity < requiredBaseQty)
+                {
+                    throw new InvalidOperationException($"Sản phẩm '{product.Name}' không đủ hàng trong kho (Còn {product.StockQuantity}, yêu cầu {requiredBaseQty} Lon).");
                 }
 
                 // Deduct stock
-                product.StockQuantity -= itemDto.Quantity;
+                product.StockQuantity -= requiredBaseQty;
                 _unitOfWork.Repository<Product>().Update(product);
 
-                decimal unitPrice = product.Price;
                 decimal itemSubtotal = itemDto.Quantity * unitPrice;
                 decimal itemDiscountAmount = itemSubtotal * (decimal)(itemDto.DiscountPercentage / 100.0);
                 decimal itemTotalAmount = itemSubtotal - itemDiscountAmount;
@@ -102,12 +135,15 @@ namespace Sales.Application.Services
                     Id = Guid.NewGuid(),
                     OrderId = order.Id,
                     ProductId = itemDto.ProductId,
+                    UnitId = itemDto.UnitId,
+                    ConversionRate = conversionRate,
                     Quantity = itemDto.Quantity,
                     UnitPrice = unitPrice,
                     DiscountPercentage = itemDto.DiscountPercentage,
                     DiscountAmount = itemDiscountAmount,
                     TotalAmount = itemTotalAmount,
-                    Product = product // Reference for mapping back
+                    Product = product,
+                    Unit = unit
                 };
 
                 details.Add(detail);
@@ -137,7 +173,7 @@ namespace Sales.Application.Services
                 throw new KeyNotFoundException($"Không tìm thấy đơn hàng với Id: {id}");
             }
 
-            if (order.OrderStatus == 3)
+            if (order.OrderStatus == OrderStatus.Cancelled)
             {
                 throw new InvalidOperationException("Đơn hàng này đã bị hủy từ trước.");
             }
@@ -148,12 +184,13 @@ namespace Sales.Application.Services
                 var product = await _unitOfWork.Repository<Product>().FirstOrDefaultAsync(p => p.Id == detail.ProductId);
                 if (product != null)
                 {
-                    product.StockQuantity += detail.Quantity;
+                    int restoreQty = (int)Math.Round(detail.Quantity * detail.ConversionRate);
+                    product.StockQuantity += restoreQty;
                     _unitOfWork.Repository<Product>().Update(product);
                 }
             }
 
-            order.OrderStatus = 3; // Cancelled
+            order.OrderStatus = OrderStatus.Cancelled;
             order.UpdatedDate = DateTime.UtcNow;
 
             _unitOfWork.Repository<Order>().Update(order);
