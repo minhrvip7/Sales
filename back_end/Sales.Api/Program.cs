@@ -24,6 +24,19 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Add CORS Policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3000")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -38,6 +51,8 @@ if (app.Environment.IsDevelopment())
 
 // Global Exception Handler Middleware
 app.UseMiddleware<ErrorHandlerMiddleware>();
+
+app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
 

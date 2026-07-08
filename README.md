@@ -26,7 +26,7 @@ Chạy lệnh sau để khởi động dự án Web API:
 ```bash
 dotnet run --project Sales.Api
 ```
-* **Swagger UI** (Môi trường Development): Truy cập tại đường dẫn [http://localhost:5247/swagger](http://localhost:5247/swagger) để kiểm tra các API endpoint.
+* **Swagger UI** (Môi trường Development): Truy cập tại đường dẫn [http://localhost:5000/swagger](http://localhost:5000/swagger) để kiểm tra các API endpoint.
 
 ---
 
@@ -44,5 +44,5 @@ Khởi động Vite development server:
 ```bash
 npm run dev
 ```
-* **Ứng dụng Web**: Truy cập đường dẫn hiển thị trên Terminal (mặc định là [http://localhost:5173](http://localhost:5173)).
+* **Ứng dụng Web**: Truy cập đường dẫn hiển thị trên Terminal (mặc định là [http://localhost:3000](http://localhost:3000)).
 * **Cấu hình API**: Bạn có thể thay đổi đường dẫn API backend tại tệp tin `.env` bằng cách sửa thuộc tính `VITE_API_BASE_URL`.
