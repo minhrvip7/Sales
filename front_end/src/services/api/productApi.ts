@@ -4,7 +4,7 @@ import type { ApiResponse, Product, CreateProductDto } from '../../types';
 export const productApi = createApi({
   reducerPath: 'productApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: 'http://localhost:5247/api',
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5247/api',
     prepareHeaders: (headers) => {
       const token = localStorage.getItem('accessToken');
       if (token) {
