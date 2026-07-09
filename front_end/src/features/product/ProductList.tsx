@@ -172,6 +172,7 @@ export const ProductList: React.FC = () => {
             pageSize: response?.data?.pageSize || pageSize,
             total: response?.data?.totalRecords || 0,
             showSizeChanger: true,
+            showTotal: (total) => `Tổng cộng: ${total} bản ghi`,
             onChange: (page, size) => {
               setPageNumber(page);
               setPageSize(size);
