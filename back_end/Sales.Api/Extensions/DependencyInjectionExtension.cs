@@ -20,6 +20,7 @@ namespace Sales.Api.Extensions
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IUnitService, UnitService>();
+            services.AddScoped<IInventoryService, InventoryService>();
 
             // Register AutoMapper
             services.AddAutoMapper(typeof(MappingProfile));

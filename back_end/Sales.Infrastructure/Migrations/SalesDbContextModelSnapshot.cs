@@ -166,6 +166,191 @@ namespace Sales.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Sales.Domain.Entities.Inventory.InventoryBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasComment("Khóa chính (UUID).");
+
+                    b.Property<int>("AllocatedQty")
+                        .HasColumnType("integer")
+                        .HasComment("Số lượng hàng đã giữ chỗ (Sales Order Confirmed).");
+
+                    b.Property<int>("AvailableQty")
+                        .HasColumnType("integer")
+                        .HasComment("Số lượng khả dụng dùng để bán (Available = OnHandQty - AllocatedQty).");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasComment("Cờ xóa mềm: true = bản ghi đã bị xóa mềm.");
+
+                    b.Property<int>("OnHandQty")
+                        .HasColumnType("integer")
+                        .HasComment("Số lượng vật lý đang có trong kho.");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasComment("FK → Products. Sản phẩm của số dư này.");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("InventoryBalances", null, t =>
+                        {
+                            t.HasComment("Bảng số dư tồn kho của sản phẩm, dùng để kiểm soát tồn kho tức thời.");
+                        });
+                });
+
+            modelBuilder.Entity("Sales.Domain.Entities.Inventory.InventoryTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasComment("Khóa chính (UUID).");
+
+                    b.Property<int>("BaseQty")
+                        .HasColumnType("integer")
+                        .HasComment("Số lượng quy đổi theo đơn vị cơ bản (cộng/trừ).");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasComment("Cờ xóa mềm.");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasComment("FK → Products.");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasComment("Ghi chú/Lý do.");
+
+                    b.Property<string>("ReferenceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasComment("Mã chứng từ tham chiếu (VD: PO-123, SO-456).");
+
+                    b.Property<int>("TransactedQty")
+                        .HasColumnType("integer")
+                        .HasComment("Số lượng giao dịch theo đơn vị lúc thao tác.");
+
+                    b.Property<Guid>("TransactedUomId")
+                        .HasColumnType("uuid")
+                        .HasComment("FK → Units. Đơn vị thao tác.");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasComment("Loại giao dịch: 1=Inbound, 2=Outbound, 3=AdjustmentIn, 4=AdjustmentOut, 5=OtherIssue.");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("TransactedUomId");
+
+                    b.ToTable("InventoryTransactions", null, t =>
+                        {
+                            t.HasComment("Bảng thẻ kho ghi nhận lịch sử giao dịch (Nhập, Xuất, Điều chỉnh).");
+                        });
+                });
+
+            modelBuilder.Entity("Sales.Domain.Entities.Inventory.ProductCost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasComment("Khóa chính (UUID).");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EffectiveDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasComment("Ngày giờ hiệu lực của mức giá vốn.");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasComment("Cờ xóa mềm.");
+
+                    b.Property<decimal>("MovingAverageCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasComment("Giá vốn bình quân theo đơn vị cơ bản.");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasComment("FK → Products.");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ProductCosts", null, t =>
+                        {
+                            t.HasComment("Lịch sử giá vốn bình quân gia quyền (Moving Average Cost) của sản phẩm.");
+                        });
+                });
+
             modelBuilder.Entity("Sales.Domain.Entities.Order.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -640,6 +825,47 @@ namespace Sales.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CustomerGroup");
+                });
+
+            modelBuilder.Entity("Sales.Domain.Entities.Inventory.InventoryBalance", b =>
+                {
+                    b.HasOne("Sales.Domain.Entities.Product.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Sales.Domain.Entities.Inventory.InventoryTransaction", b =>
+                {
+                    b.HasOne("Sales.Domain.Entities.Product.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Sales.Domain.Entities.Product.Unit", "TransactedUom")
+                        .WithMany()
+                        .HasForeignKey("TransactedUomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("TransactedUom");
+                });
+
+            modelBuilder.Entity("Sales.Domain.Entities.Inventory.ProductCost", b =>
+                {
+                    b.HasOne("Sales.Domain.Entities.Product.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("Sales.Domain.Entities.Order.Order", b =>

@@ -10,12 +10,16 @@ import {
 import type { Unit, CreateUnitDto } from '../../types';
 
 export const UnitList: React.FC = () => {
-  const { data: response, isLoading } = useGetUnitsQuery();
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [keyword] = useState('');
+
+  const { data: response, isLoading } = useGetUnitsQuery({ pageNumber, pageSize, keyword });
   const [createUnit] = useCreateUnitMutation();
   const [updateUnit] = useUpdateUnitMutation();
   const [deleteUnit] = useDeleteUnitMutation();
 
-  const units = response?.data || [];
+  const units = response?.data?.data || [];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
@@ -120,7 +124,22 @@ export const UnitList: React.FC = () => {
       </div>
 
       <Card bordered={false} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <Table dataSource={units} columns={columns} rowKey="id" loading={isLoading} />
+        <Table 
+          dataSource={units} 
+          columns={columns} 
+          rowKey="id" 
+          loading={isLoading} 
+          pagination={{
+            current: response?.data?.pageNumber || pageNumber,
+            pageSize: response?.data?.pageSize || pageSize,
+            total: response?.data?.totalRecords || 0,
+            showSizeChanger: true,
+            onChange: (page, size) => {
+              setPageNumber(page);
+              setPageSize(size);
+            }
+          }}
+        />
       </Card>
 
       <Modal

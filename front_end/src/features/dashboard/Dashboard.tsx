@@ -12,8 +12,8 @@ export const Dashboard: React.FC = () => {
   const { data: ordersResponse } = useGetOrdersQuery();
   const { data: productsResponse } = useGetProductsQuery();
 
-  const orders = ordersResponse?.data || [];
-  const products = productsResponse?.data || [];
+  const orders = ordersResponse?.data?.data || [];
+  const products = productsResponse?.data?.data || [];
 
   // Calculate statistics
   const totalRevenue = orders.reduce((sum, order) => sum + (order.orderStatus !== 3 ? order.totalAmount : 0), 0);

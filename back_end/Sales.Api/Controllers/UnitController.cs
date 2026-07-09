@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Sales.Application.DTOs.Unit;
+using Sales.Application.DTOs.Common;
 using Sales.Application.IServices;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -19,16 +20,16 @@ namespace Sales.Api.Controllers
             _unitService = unitService;
         }
 
-        /// <summary>Lấy danh sách tất cả đơn vị tính.</summary>
+        /// <summary>Lấy danh sách đơn vị tính có phân trang.</summary>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Lấy danh sách đơn vị tính",
-            Description = "Trả về toàn bộ đơn vị tính trong hệ thống. Ví dụ: Chai, Hộp, Thùng, Kg, Lít."
+            Summary = "Lấy danh sách phân trang đơn vị tính",
+            Description = "Lấy danh sách đơn vị tính có hỗ trợ phân trang và tìm kiếm theo từ khóa."
         )]
         [SwaggerResponse(200, "Lấy danh sách đơn vị tính thành công.")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetPaged([FromQuery] PagedRequest request)
         {
-            var result = await _unitService.GetAllUnitsAsync();
+            var result = await _unitService.GetPagedUnitsAsync(request);
             return OkResponse(result, "Lấy danh sách đơn vị tính thành công.");
         }
 

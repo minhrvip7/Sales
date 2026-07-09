@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Sales.Application.DTOs.Category;
+using Sales.Application.DTOs.Common;
 using Sales.Application.IServices;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -19,16 +20,16 @@ namespace Sales.Api.Controllers
             _categoryService = categoryService;
         }
 
-        /// <summary>Lấy danh sách tất cả nhóm hàng.</summary>
+        /// <summary>Lấy danh sách nhóm hàng có phân trang.</summary>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Lấy danh sách nhóm hàng",
-            Description = "Trả về toàn bộ nhóm hàng trong hệ thống, bao gồm cả nhóm đang hoạt động và đã ẩn."
+            Summary = "Lấy danh sách phân trang nhóm hàng",
+            Description = "Lấy danh sách nhóm hàng có hỗ trợ phân trang và tìm kiếm theo từ khóa."
         )]
         [SwaggerResponse(200, "Lấy danh sách nhóm hàng thành công.")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetPaged([FromQuery] PagedRequest request)
         {
-            var result = await _categoryService.GetAllCategoriesAsync();
+            var result = await _categoryService.GetPagedCategoriesAsync(request);
             return OkResponse(result, "Lấy danh sách nhóm sản phẩm thành công.");
         }
 

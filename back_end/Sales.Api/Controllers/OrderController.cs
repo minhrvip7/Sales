@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Sales.Application.DTOs.Order;
+using Sales.Application.DTOs.Common;
 using Sales.Application.IServices;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -19,16 +20,16 @@ namespace Sales.Api.Controllers
             _orderService = orderService;
         }
 
-        /// <summary>Lấy danh sách tất cả đơn hàng.</summary>
+        /// <summary>Lấy danh sách đơn hàng có phân trang.</summary>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Lấy danh sách đơn hàng",
-            Description = "Trả về toàn bộ đơn hàng trong hệ thống bao gồm thông tin khách hàng, trạng thái và tổng tiền. Sắp xếp theo ngày tạo mới nhất trước."
+            Summary = "Lấy danh sách phân trang đơn hàng",
+            Description = "Trả về danh sách đơn hàng có hỗ trợ phân trang và tìm kiếm theo từ khóa."
         )]
         [SwaggerResponse(200, "Lấy danh sách đơn hàng thành công.")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetPaged([FromQuery] PagedRequest request)
         {
-            var result = await _orderService.GetAllOrdersAsync();
+            var result = await _orderService.GetPagedOrdersAsync(request);
             return OkResponse(result, "Lấy danh sách đơn hàng thành công.");
         }
 

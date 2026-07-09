@@ -6,6 +6,8 @@ import OrderList from './features/order/OrderList';
 import CreateOrder from './features/order/CreateOrder';
 import CategoryList from './features/category/CategoryList';
 import UnitList from './features/unit/UnitList';
+import InventoryList from './features/inventory/InventoryList';
+import InventoryTransactionHistory from './features/inventory/InventoryTransactionHistory';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route path="units" element={<UnitList />} />
           <Route path="orders" element={<OrderList />} />
           <Route path="orders/new" element={<CreateOrder />} />
+          <Route path="inventory" element={<InventoryList />} />
+          <Route path="inventory/transactions/:productId" element={<InventoryTransactionHistory />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

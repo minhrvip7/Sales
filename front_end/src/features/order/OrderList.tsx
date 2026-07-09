@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, Button, Space, Card, Tag, Modal, message } from 'antd';
 import { StopOutlined, EyeOutlined } from '@ant-design/icons';
 import { useGetOrdersQuery, useCancelOrderMutation } from '../../services/api/orderApi';
 import type { Order } from '../../types';
 
 export const OrderList: React.FC = () => {
-  const { data: response, isLoading } = useGetOrdersQuery();
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [keyword] = useState('');
+
+  const { data: response, isLoading } = useGetOrdersQuery({ pageNumber, pageSize, keyword });
   const [cancelOrder] = useCancelOrderMutation();
 
-  const orders = response?.data || [];
+  const orders = response?.data?.data || [];
 
   const handleCancelOrder = (id: string) => {
     Modal.confirm({
@@ -146,7 +150,22 @@ export const OrderList: React.FC = () => {
       <h2 style={{ marginBottom: '24px' }}>Quản lý đơn hàng bán lẻ</h2>
 
       <Card bordered={false} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <Table dataSource={orders} columns={columns} rowKey="id" loading={isLoading} />
+        <Table 
+          dataSource={orders} 
+          columns={columns} 
+          rowKey="id" 
+          loading={isLoading} 
+          pagination={{
+            current: response?.data?.pageNumber || pageNumber,
+            pageSize: response?.data?.pageSize || pageSize,
+            total: response?.data?.totalRecords || 0,
+            showSizeChanger: true,
+            onChange: (page, size) => {
+              setPageNumber(page);
+              setPageSize(size);
+            }
+          }}
+        />
       </Card>
     </div>
   );

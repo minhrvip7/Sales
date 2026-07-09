@@ -1,6 +1,7 @@
 using Sales.Domain.Entities.Customer;
 using Sales.Domain.Entities.Order;
 using Sales.Domain.Entities.Product;
+using Sales.Domain.Entities.Inventory;
 using Sales.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,9 @@ namespace Sales.Infrastructure.DataContext
         public DbSet<ProductUnitConversion> ProductUnitConversions { get; set; } = null!;
         public DbSet<Order> Orders { get; set; } = null!;
         public DbSet<OrderDetail> OrderDetails { get; set; } = null!;
+        public DbSet<InventoryBalance> InventoryBalances { get; set; } = null!;
+        public DbSet<InventoryTransaction> InventoryTransactions { get; set; } = null!;
+        public DbSet<ProductCost> ProductCosts { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -265,6 +269,80 @@ namespace Sales.Infrastructure.DataContext
                     .WithMany()
                     .HasForeignKey(d => d.UnitId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+            // ──────────────────────────────────────────
+            // InventoryBalance Configuration
+            // ──────────────────────────────────────────
+            modelBuilder.Entity<InventoryBalance>(entity =>
+            {
+                entity.ToTable("InventoryBalances", t => t.HasComment("Bảng số dư tồn kho của sản phẩm, dùng để kiểm soát tồn kho tức thời."));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasComment("Khóa chính (UUID).");
+                entity.Property(e => e.ProductId).HasComment("FK → Products. Sản phẩm của số dư này.");
+                entity.Property(e => e.OnHandQty).HasComment("Số lượng vật lý đang có trong kho.");
+                entity.Property(e => e.AllocatedQty).HasComment("Số lượng hàng đã giữ chỗ (Sales Order Confirmed).");
+                entity.Property(e => e.AvailableQty).HasComment("Số lượng khả dụng dùng để bán (Available = OnHandQty - AllocatedQty).");
+                entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasComment("Cờ xóa mềm: true = bản ghi đã bị xóa mềm.");
+                
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(d => d.Product)
+                    .WithMany()
+                    .HasForeignKey(d => d.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ──────────────────────────────────────────
+            // InventoryTransaction Configuration
+            // ──────────────────────────────────────────
+            modelBuilder.Entity<InventoryTransaction>(entity =>
+            {
+                entity.ToTable("InventoryTransactions", t => t.HasComment("Bảng thẻ kho ghi nhận lịch sử giao dịch (Nhập, Xuất, Điều chỉnh)."));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasComment("Khóa chính (UUID).");
+                entity.Property(e => e.ProductId).HasComment("FK → Products.");
+                entity.Property(e => e.Type)
+                    .HasConversion<int>()
+                    .HasComment("Loại giao dịch: 1=Inbound, 2=Outbound, 3=AdjustmentIn, 4=AdjustmentOut, 5=OtherIssue.");
+                entity.Property(e => e.ReferenceNumber).HasMaxLength(50).HasComment("Mã chứng từ tham chiếu (VD: PO-123, SO-456).");
+                entity.Property(e => e.TransactedQty).HasComment("Số lượng giao dịch theo đơn vị lúc thao tác.");
+                entity.Property(e => e.TransactedUomId).HasComment("FK → Units. Đơn vị thao tác.");
+                entity.Property(e => e.BaseQty).HasComment("Số lượng quy đổi theo đơn vị cơ bản (cộng/trừ).");
+                entity.Property(e => e.Reason).HasMaxLength(500).HasComment("Ghi chú/Lý do.");
+                entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasComment("Cờ xóa mềm.");
+                
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(d => d.Product)
+                    .WithMany()
+                    .HasForeignKey(d => d.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(d => d.TransactedUom)
+                    .WithMany()
+                    .HasForeignKey(d => d.TransactedUomId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ──────────────────────────────────────────
+            // ProductCost Configuration
+            // ──────────────────────────────────────────
+            modelBuilder.Entity<ProductCost>(entity =>
+            {
+                entity.ToTable("ProductCosts", t => t.HasComment("Lịch sử giá vốn bình quân gia quyền (Moving Average Cost) của sản phẩm."));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasComment("Khóa chính (UUID).");
+                entity.Property(e => e.ProductId).HasComment("FK → Products.");
+                entity.Property(e => e.MovingAverageCost).HasPrecision(18, 2).HasComment("Giá vốn bình quân theo đơn vị cơ bản.");
+                entity.Property(e => e.EffectiveDate).HasComment("Ngày giờ hiệu lực của mức giá vốn.");
+                entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasComment("Cờ xóa mềm.");
+                
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(d => d.Product)
+                    .WithMany()
+                    .HasForeignKey(d => d.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
 using Sales.Application.DTOs.Product;
+using Sales.Application.DTOs.Common;
 using Sales.Application.IServices;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using Sales.Domain.Entities.Product;
 using Sales.Domain.Entities.Order;
 using Sales.Domain.IRepositories;
@@ -31,6 +34,35 @@ namespace Sales.Application.Services
                 dto.HasTransactions = await _unitOfWork.Repository<OrderDetail>().CountAsync(od => od.ProductId == dto.Id) > 0;
             }
             return dtos;
+        }
+
+        public async Task<PagedResponse<ProductDto>> GetPagedProductsAsync(PagedRequest request)
+        {
+            var query = _unitOfWork.Repository<Product>().GetQueryable();
+
+            if (!string.IsNullOrEmpty(request.Keyword))
+            {
+                query = query.Where(x => x.Name.Contains(request.Keyword) || x.Code.Contains(request.Keyword) || x.Barcode.Contains(request.Keyword));
+            }
+
+            var totalRecords = await query.CountAsync();
+
+            var data = await query
+                .Include("Category")
+                .Include("BaseUnit")
+                .Include("Conversions.AlternativeUnit")
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            var dtos = _mapper.Map<IEnumerable<ProductDto>>(data);
+            foreach (var dto in dtos)
+            {
+                dto.HasTransactions = await _unitOfWork.Repository<OrderDetail>().CountAsync(od => od.ProductId == dto.Id) > 0;
+            }
+
+            return new PagedResponse<ProductDto>(dtos, totalRecords, request.PageNumber, request.PageSize);
         }
 
         public async Task<ProductDto> GetProductByIdAsync(Guid id)

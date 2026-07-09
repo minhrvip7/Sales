@@ -10,6 +10,8 @@ namespace Sales.Domain.IRepositories
     {
         Task<int> CountAsync(Expression<Func<TEntity, bool>> filter = null);
 
+        IQueryable<TEntity> GetQueryable();
+
         Task<IEnumerable<TEntity>> GetAsync(
             Expression<Func<TEntity, bool>> filter = null,
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,

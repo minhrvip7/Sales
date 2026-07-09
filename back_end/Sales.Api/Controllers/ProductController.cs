@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Sales.Application.DTOs.Product;
+using Sales.Application.DTOs.Common;
 using Sales.Application.IServices;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -19,16 +20,16 @@ namespace Sales.Api.Controllers
             _productService = productService;
         }
 
-        /// <summary>Lấy danh sách tất cả sản phẩm.</summary>
+        /// <summary>Lấy danh sách sản phẩm có phân trang.</summary>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Lấy danh sách sản phẩm",
-            Description = "Trả về toàn bộ sản phẩm trong hệ thống bao gồm thông tin nhóm hàng, đơn vị tính cơ bản, tồn kho và danh sách quy đổi đơn vị tính phụ."
+            Summary = "Lấy danh sách phân trang sản phẩm",
+            Description = "Lấy danh sách sản phẩm có hỗ trợ phân trang và tìm kiếm theo từ khóa."
         )]
         [SwaggerResponse(200, "Lấy danh sách sản phẩm thành công.")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetPaged([FromQuery] PagedRequest request)
         {
-            var result = await _productService.GetAllProductsAsync();
+            var result = await _productService.GetPagedProductsAsync(request);
             return OkResponse(result, "Lấy danh sách sản phẩm thành công.");
         }
 

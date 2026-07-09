@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { ApiResponse, Category, CreateCategoryDto } from '../../types';
+import type { ApiResponse, Category, CreateCategoryDto, PagedRequest, PagedResponse } from '../../types';
 
 export const categoryApi = createApi({
   reducerPath: 'categoryApi',
@@ -15,8 +15,11 @@ export const categoryApi = createApi({
   }),
   tagTypes: ['Category'],
   endpoints: (builder) => ({
-    getCategories: builder.query<ApiResponse<Category[]>, void>({
-      query: () => '/category',
+    getCategories: builder.query<ApiResponse<PagedResponse<Category>>, PagedRequest | void>({
+      query: (params) => ({
+        url: '/category',
+        params: params || {},
+      }),
       providesTags: ['Category'],
     }),
     getCategoryById: builder.query<ApiResponse<Category>, string>({

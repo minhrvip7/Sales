@@ -10,12 +10,16 @@ import {
 import type { Category, CreateCategoryDto } from '../../types';
 
 export const CategoryList: React.FC = () => {
-  const { data: response, isLoading } = useGetCategoriesQuery();
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [keyword] = useState('');
+
+  const { data: response, isLoading } = useGetCategoriesQuery({ pageNumber, pageSize, keyword });
   const [createCategory] = useCreateCategoryMutation();
   const [updateCategory] = useUpdateCategoryMutation();
   const [deleteCategory] = useDeleteCategoryMutation();
 
-  const categories = response?.data || [];
+  const categories = response?.data?.data || [];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -120,7 +124,22 @@ export const CategoryList: React.FC = () => {
       </div>
 
       <Card bordered={false} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <Table dataSource={categories} columns={columns} rowKey="id" loading={isLoading} />
+        <Table 
+          dataSource={categories} 
+          columns={columns} 
+          rowKey="id" 
+          loading={isLoading} 
+          pagination={{
+            current: response?.data?.pageNumber || pageNumber,
+            pageSize: response?.data?.pageSize || pageSize,
+            total: response?.data?.totalRecords || 0,
+            showSizeChanger: true,
+            onChange: (page, size) => {
+              setPageNumber(page);
+              setPageSize(size);
+            }
+          }}
+        />
       </Card>
 
       <Modal

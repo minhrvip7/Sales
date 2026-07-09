@@ -1,0 +1,17 @@
+- [x] 1. Cấu hình Services & Axios
+  - [x] Khởi tạo service `inventoryService.ts`.
+  - [x] Cài đặt các hàm gọi API endpoint Backend đã dựng: Get Balances, Get Transactions.
+- [x] 2. Route & State
+  - [x] Đăng ký route `/inventory` cho trang tổng quan tồn kho.
+  - [x] Đăng ký route `/inventory/transactions/:productId` cho trang xem thẻ kho chi tiết.
+- [x] 3. Giao diện Tổng quan Tồn kho (`/inventory`)
+  - [x] Tạo Component chính `InventoryList`.
+  - [x] Dựng bộ lọc: Input Search (theo tên/mã SP).
+  - [x] Dựng `Antd Table`: Mã SP, Tên SP, Đơn vị, Giá vốn, On-hand, Allocated, Available.
+  - [x] Bổ sung nút bấm "Xem thẻ kho" chuyển hướng hoặc mở Modal.
+- [x] 4. Giao diện Thẻ Kho
+  - [x] Tạo Component `InventoryTransactionHistory`.
+  - [x] Dựng `Antd Table` hiển thị lịch sử: Ngày, Loại giao dịch (hiển thị màu sắc bằng `Tag`), Mã tham chiếu, Số lượng giao dịch, Số lượng quy đổi.
+- [x] 5. Quality Gate
+  - [x] `npm run build` hoặc chạy thử không gặp lỗi syntax.
+  - [x] UI mượt mà.

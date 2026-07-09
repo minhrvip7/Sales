@@ -21,6 +21,8 @@ namespace Sales.Infrastructure.Repositories
             DbSet = context.Set<TEntity>();
         }
 
+        public virtual IQueryable<TEntity> GetQueryable() => DbSet;
+
         public virtual async Task<int> CountAsync(Expression<Func<TEntity, bool>> filter = null)
         {
             IQueryable<TEntity> query = DbSet;

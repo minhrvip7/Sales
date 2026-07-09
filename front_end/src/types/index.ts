@@ -139,3 +139,40 @@ export interface CreateUnitDto {
   code: string;
   description?: string;
 }
+
+export interface InventoryBalance {
+  id: string;
+  productId: string;
+  productCode: string;
+  productName: string;
+  onHandQty: number;
+  allocatedQty: number;
+  availableQty: number;
+}
+
+export interface InventoryTransaction {
+  id: string;
+  productId: string;
+  productName: string;
+  type: number;
+  referenceNumber: string;
+  transactedQty: number;
+  transactedUomName: string;
+  baseQty: number;
+  reason?: string;
+  createdDate: string;
+}
+
+export interface PagedRequest {
+  pageNumber: number;
+  pageSize: number;
+  keyword?: string;
+}
+
+export interface PagedResponse<T> {
+  data: T[];
+  totalRecords: number;
+  totalPages: number;
+  pageNumber: number;
+  pageSize: number;
+}

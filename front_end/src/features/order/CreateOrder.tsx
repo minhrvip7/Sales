@@ -5,6 +5,8 @@ import { useGetProductsQuery } from '../../services/api/productApi';
 import { useCreateOrderMutation } from '../../services/api/orderApi';
 import type { CreateOrderDto, CreateOrderDetailDto, Product } from '../../types';
 import { useNavigate } from 'react-router-dom';
+import { PaginatedSelect } from '../../components/PaginatedSelect';
+import apiClient from '../../services/apiClient';
 
 interface SelectedItem {
   key: string; // Product ID
@@ -21,9 +23,10 @@ export const CreateOrder: React.FC = () => {
   const { data: productsResponse } = useGetProductsQuery();
   const [createOrder] = useCreateOrderMutation();
 
-  const products = productsResponse?.data || [];
+  const products = productsResponse?.data?.data || [];
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [form] = Form.useForm();
+  const [localProducts, setLocalProducts] = useState<Product[]>([]);
 
   // Calculate totals
   const subTotal = selectedItems.reduce((sum, item) => {
@@ -36,7 +39,7 @@ export const CreateOrder: React.FC = () => {
   const totalAmount = subTotal + taxAmount;
 
   const handleAddProduct = (productId: string) => {
-    const product = products.find(p => p.id === productId);
+    const product = localProducts.find(p => p.id === productId) || products.find(p => p.id === productId);
     if (!product) return;
 
     // Check if stock is available
@@ -77,7 +80,7 @@ export const CreateOrder: React.FC = () => {
     let conversionRate = 1;
     let unitPrice = 0;
 
-    for (const p of products) {
+    for (const p of [...products, ...localProducts]) {
       if (p.barcode === barcode) {
         foundProduct = p;
         foundUnitId = p.baseUnitId;
@@ -340,20 +343,29 @@ export const CreateOrder: React.FC = () => {
                 style={{ width: '100%', marginBottom: '16px' }}
               />
 
-              <Select
-                showSearch
+              <PaginatedSelect
                 placeholder="Tìm sản phẩm theo tên hoặc mã..."
-                optionFilterProp="children"
                 style={{ width: '100%', marginBottom: '24px' }}
                 onChange={handleAddProduct}
-                value={null} // Reset select value after choosing
-              >
-                {products.map(p => (
-                  <Select.Option key={p.id} value={p.id} disabled={p.stockQuantity <= 0}>
-                    {p.name} - Mã: {p.code} (Còn lại: {p.stockQuantity} {p.baseUnit?.name || 'Cái'}) - Giá: {p.price.toLocaleString('vi-VN')} ₫
-                  </Select.Option>
-                ))}
-              </Select>
+                value={null}
+                fetchData={async (page, keyword) => {
+                  const res = await apiClient.get('/product', { params: { pageNumber: page, pageSize: 20, keyword } });
+                  const newProducts = res.data.data.data;
+                  setLocalProducts(prev => {
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const filtered = newProducts.filter((p: any) => !existingIds.has(p.id));
+                    return [...prev, ...filtered];
+                  });
+                  const mappedData = newProducts.map((p: any) => ({
+                    ...p,
+                    displayName: `${p.name} - Mã: ${p.code} (Còn lại: ${p.stockQuantity} ${p.baseUnit?.name || 'Cái'}) - Giá: ${p.price.toLocaleString('vi-VN')} ₫`,
+                    disabled: p.stockQuantity <= 0
+                  }));
+                  return { data: mappedData, totalPages: res.data.data.totalPages };
+                }}
+                valueProp="id"
+                labelProp="displayName"
+              />
 
               <Table
                 dataSource={selectedItems}

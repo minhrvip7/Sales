@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { ApiResponse, Unit, CreateUnitDto } from '../../types';
+import type { ApiResponse, Unit, CreateUnitDto, PagedRequest, PagedResponse } from '../../types';
 
 export const unitApi = createApi({
   reducerPath: 'unitApi',
@@ -15,8 +15,11 @@ export const unitApi = createApi({
   }),
   tagTypes: ['Unit'],
   endpoints: (builder) => ({
-    getUnits: builder.query<ApiResponse<Unit[]>, void>({
-      query: () => '/unit',
+    getUnits: builder.query<ApiResponse<PagedResponse<Unit>>, PagedRequest | void>({
+      query: (params) => ({
+        url: '/unit',
+        params: params || {},
+      }),
       providesTags: ['Unit'],
     }),
     getUnitById: builder.query<ApiResponse<Unit>, string>({

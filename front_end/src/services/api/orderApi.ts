@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { ApiResponse, Order, CreateOrderDto } from '../../types';
+import type { ApiResponse, Order, CreateOrderDto, PagedRequest, PagedResponse } from '../../types';
 
 export const orderApi = createApi({
   reducerPath: 'orderApi',
@@ -15,8 +15,11 @@ export const orderApi = createApi({
   }),
   tagTypes: ['Order', 'Product'],
   endpoints: (builder) => ({
-    getOrders: builder.query<ApiResponse<Order[]>, void>({
-      query: () => '/order',
+    getOrders: builder.query<ApiResponse<PagedResponse<Order>>, PagedRequest | void>({
+      query: (params) => ({
+        url: '/order',
+        params: params || {},
+      }),
       providesTags: ['Order'],
     }),
     getOrderById: builder.query<ApiResponse<Order>, string>({

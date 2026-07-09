@@ -142,3 +142,9 @@ namespace Sales.Domain.Entities.Sample
     }
 }
 ```
+
+## 10. Quy trình Phát triển Tính năng (Workflow)
+- Khi nhận yêu cầu có chứa từ khóa **"phát triển"** hoặc **"develop"**, bắt buộc phải tuân thủ nghiêm ngặt các bước của quy trình trong thư mục process/ (đặc biệt là workflow-srs-to-feature.md).
+- Bắt đầu bằng **Phase 1** (BA Review & Concept): Đọc SRS/PRD, đặt câu hỏi phản biện, chốt phương án và tạo file concept-{module}-{feature}.md.
+- TUYỆT ĐỐI không được đi thẳng vào lập Kế hoạch triển khai (Implementation Plan) hay viết code mà bỏ qua các bước tạo tài liệu Concept, Spec, và Design.
+- Quan trọng: Sau mỗi bước (phase) của quy trình, BẮT BUỘC phải dừng lại, xuất kết quả để user review và phải đợi user confirm thì mới được làm bước tiếp theo.

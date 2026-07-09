@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using Sales.Application.DTOs.Order;
+using Sales.Application.DTOs.Common;
 using Sales.Application.IServices;
+using Microsoft.EntityFrameworkCore;
 using Sales.Domain.Entities.Customer;
 using Sales.Domain.Entities.Order;
 using Sales.Domain.Entities.Product;
@@ -30,6 +32,31 @@ namespace Sales.Application.Services
                 includeProperties: "Customer,OrderDetails.Product,OrderDetails.Unit",
                 ignoreQueryFilters: true); // Bypass filter để lịch sử hiển thị cả sản phẩm/khách hàng đã xóa mềm
             return _mapper.Map<IEnumerable<OrderDto>>(orders);
+        }
+
+        public async Task<PagedResponse<OrderDto>> GetPagedOrdersAsync(PagedRequest request)
+        {
+            var query = _unitOfWork.Repository<Order>().GetQueryable().IgnoreQueryFilters();
+
+            if (!string.IsNullOrEmpty(request.Keyword))
+            {
+                query = query.Where(x => x.OrderNumber.Contains(request.Keyword) || (x.Customer != null && x.Customer.Name.Contains(request.Keyword)));
+            }
+
+            var totalRecords = await query.CountAsync();
+
+            var data = await query
+                .Include("Customer")
+                .Include("OrderDetails.Product")
+                .Include("OrderDetails.Unit")
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            var dtoList = _mapper.Map<IEnumerable<OrderDto>>(data);
+
+            return new PagedResponse<OrderDto>(dtoList, totalRecords, request.PageNumber, request.PageSize);
         }
 
         public async Task<OrderDto> GetOrderByIdAsync(Guid id)

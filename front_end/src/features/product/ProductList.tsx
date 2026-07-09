@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Button, Space, Card, Tag, Modal, Form, Input, InputNumber, Select, message, Row, Col, Divider } from 'antd';
+import { Table, Button, Space, Card, Tag, Modal, Form, Input, InputNumber, message, Row, Col, Divider } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
   useGetProductsQuery,
@@ -7,21 +7,22 @@ import {
   useUpdateProductMutation,
   useDeleteProductMutation,
 } from '../../services/api/productApi';
-import { useGetCategoriesQuery } from '../../services/api/categoryApi';
-import { useGetUnitsQuery } from '../../services/api/unitApi';
 import type { CreateProductDto, Product } from '../../types';
+import { PaginatedSelect } from '../../components/PaginatedSelect';
+import apiClient from '../../services/apiClient';
 
 export const ProductList: React.FC = () => {
-  const { data: response, isLoading } = useGetProductsQuery();
-  const { data: categoriesResponse } = useGetCategoriesQuery();
-  const { data: unitsResponse } = useGetUnitsQuery();
   const [createProduct] = useCreateProductMutation();
   const [updateProduct] = useUpdateProductMutation();
   const [deleteProduct] = useDeleteProductMutation();
 
-  const products = response?.data || [];
-  const categories = categoriesResponse?.data || [];
-  const units = unitsResponse?.data || [];
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [keyword] = useState('');
+
+  const { data: response, isLoading } = useGetProductsQuery({ pageNumber, pageSize, keyword });
+
+  const products = response?.data?.data || [];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -161,7 +162,22 @@ export const ProductList: React.FC = () => {
       </div>
 
       <Card bordered={false} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <Table dataSource={products} columns={columns} rowKey="id" loading={isLoading} />
+        <Table 
+          dataSource={products} 
+          columns={columns} 
+          rowKey="id" 
+          loading={isLoading} 
+          pagination={{
+            current: response?.data?.pageNumber || pageNumber,
+            pageSize: response?.data?.pageSize || pageSize,
+            total: response?.data?.totalRecords || 0,
+            showSizeChanger: true,
+            onChange: (page, size) => {
+              setPageNumber(page);
+              setPageSize(size);
+            }
+          }}
+        />
       </Card>
 
       <Modal
@@ -224,11 +240,15 @@ export const ProductList: React.FC = () => {
                 label="Nhóm sản phẩm"
                 rules={[{ required: true, message: 'Vui lòng chọn nhóm sản phẩm' }]}
               >
-                <Select placeholder="Chọn nhóm">
-                  {categories.map(c => (
-                    <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
-                  ))}
-                </Select>
+                <PaginatedSelect 
+                  placeholder="Chọn nhóm"
+                  fetchData={async (page, keyword) => {
+                    const res = await apiClient.get('/category', { params: { pageNumber: page, pageSize: 20, keyword } });
+                    return { data: res.data.data.data, totalPages: res.data.data.totalPages };
+                  }}
+                  valueProp="id"
+                  labelProp="name"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -238,16 +258,21 @@ export const ProductList: React.FC = () => {
                 rules={[{ required: true, message: 'Vui lòng chọn đơn vị tính' }]}
                 extra={editingProduct?.hasTransactions ? <span style={{ color: 'orange', fontSize: '12px' }}>Đã có giao dịch, không thể sửa đơn vị tính cơ bản.</span> : null}
               >
-                <Select placeholder="Chọn đơn vị" disabled={editingProduct?.hasTransactions}>
-                  {units.map(u => (
-                    <Select.Option key={u.id} value={u.id}>{u.name}</Select.Option>
-                  ))}
-                </Select>
+                <PaginatedSelect 
+                  placeholder="Chọn đơn vị" 
+                  disabled={editingProduct?.hasTransactions}
+                  fetchData={async (page, keyword) => {
+                    const res = await apiClient.get('/unit', { params: { pageNumber: page, pageSize: 20, keyword } });
+                    return { data: res.data.data.data, totalPages: res.data.data.totalPages };
+                  }}
+                  valueProp="id"
+                  labelProp="name"
+                />
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider orientation="left" style={{ margin: '12px 0' }}>Đơn vị quy đổi</Divider>
+          <Divider style={{ margin: '12px 0' }}>Đơn vị quy đổi</Divider>
           <Form.List name="conversions">
             {(fields, { add, remove }) => (
               <>
@@ -258,11 +283,16 @@ export const ProductList: React.FC = () => {
                       name={[name, 'alternativeUnitId']}
                       rules={[{ required: true, message: 'Chọn đơn vị' }]}
                     >
-                      <Select placeholder="Đơn vị" style={{ width: 130 }}>
-                        {units.map(u => (
-                          <Select.Option key={u.id} value={u.id}>{u.name}</Select.Option>
-                        ))}
-                      </Select>
+                      <PaginatedSelect 
+                        placeholder="Đơn vị" 
+                        style={{ width: 130 }}
+                        fetchData={async (page, keyword) => {
+                          const res = await apiClient.get('/unit', { params: { pageNumber: page, pageSize: 20, keyword } });
+                          return { data: res.data.data.data, totalPages: res.data.data.totalPages };
+                        }}
+                        valueProp="id"
+                        labelProp="name"
+                      />
                     </Form.Item>
                     <Form.Item
                       {...restField}

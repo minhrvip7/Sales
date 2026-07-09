@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
 using Sales.Application.DTOs.Unit;
+using Sales.Application.DTOs.Common;
 using Sales.Application.IServices;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using Sales.Domain.Entities.Product;
 using Sales.Domain.IRepositories;
 
@@ -24,6 +27,28 @@ namespace Sales.Application.Services
         {
             var units = await _unitOfWork.Repository<Unit>().GetAsync();
             return _mapper.Map<IEnumerable<UnitDto>>(units);
+        }
+
+        public async Task<PagedResponse<UnitDto>> GetPagedUnitsAsync(PagedRequest request)
+        {
+            var query = _unitOfWork.Repository<Unit>().GetQueryable();
+
+            if (!string.IsNullOrEmpty(request.Keyword))
+            {
+                query = query.Where(x => x.Name.Contains(request.Keyword) || x.Code.Contains(request.Keyword));
+            }
+
+            var totalRecords = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            var dtoList = _mapper.Map<IEnumerable<UnitDto>>(data);
+
+            return new PagedResponse<UnitDto>(dtoList, totalRecords, request.PageNumber, request.PageSize);
         }
 
         public async Task<UnitDto> GetUnitByIdAsync(Guid id)

@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
 using Sales.Application.DTOs.Category;
+using Sales.Application.DTOs.Common;
 using Sales.Application.IServices;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using Sales.Domain.Entities.Product;
 using Sales.Domain.IRepositories;
 
@@ -24,6 +27,28 @@ namespace Sales.Application.Services
         {
             var categories = await _unitOfWork.Repository<Category>().GetAsync();
             return _mapper.Map<IEnumerable<CategoryDto>>(categories);
+        }
+
+        public async Task<PagedResponse<CategoryDto>> GetPagedCategoriesAsync(PagedRequest request)
+        {
+            var query = _unitOfWork.Repository<Category>().GetQueryable();
+
+            if (!string.IsNullOrEmpty(request.Keyword))
+            {
+                query = query.Where(x => x.Name.Contains(request.Keyword) || x.Code.Contains(request.Keyword));
+            }
+
+            var totalRecords = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            var dtoList = _mapper.Map<IEnumerable<CategoryDto>>(data);
+
+            return new PagedResponse<CategoryDto>(dtoList, totalRecords, request.PageNumber, request.PageSize);
         }
 
         public async Task<CategoryDto> GetCategoryByIdAsync(Guid id)
