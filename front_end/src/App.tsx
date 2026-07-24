@@ -8,6 +8,8 @@ import CategoryList from './features/category/CategoryList';
 import UnitList from './features/unit/UnitList';
 import InventoryList from './features/inventory/InventoryList';
 import InventoryTransactionHistory from './features/inventory/InventoryTransactionHistory';
+import GoodsReceiptList from './features/inventory/goods-receipt/GoodsReceiptList';
+import GoodsReceiptForm from './features/inventory/goods-receipt/GoodsReceiptForm';
 
 function App() {
   return (
@@ -22,6 +24,9 @@ function App() {
           <Route path="orders/new" element={<CreateOrder />} />
           <Route path="inventory" element={<InventoryList />} />
           <Route path="inventory/transactions/:productId" element={<InventoryTransactionHistory />} />
+          <Route path="inventory/goods-receipt" element={<GoodsReceiptList />} />
+          <Route path="inventory/goods-receipt/new" element={<GoodsReceiptForm />} />
+          <Route path="inventory/goods-receipt/:id" element={<GoodsReceiptForm />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

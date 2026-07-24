@@ -37,20 +37,24 @@ Các quy tắc này áp dụng chuyên biệt cho phần **Backend** của dự 
 
 ---
 
-## 4. Swagger / OpenAPI
+## 4. OpenAPI / Scalar (thay thế Swashbuckle từ .NET 10)
 
+- Dự án sử dụng **`Microsoft.AspNetCore.OpenApi`** (native) kết hợp **`Scalar.AspNetCore`** làm UI – **không dùng Swashbuckle**.
 - Mọi **action trong Controller** phải có:
-  - `/// <summary>` – mô tả ngắn (hiển thị title trên Swagger)
-  - `[SwaggerOperation(Summary = "...", Description = "...")]` – mô tả chi tiết
-  - `[SwaggerResponse(statusCode, "...")]` cho tất cả HTTP status codes có thể trả về
-- `Program.cs` phải cấu hình `AddSwaggerGen` với:
-  - `SwaggerDoc` có `Title`, `Version`, `Description`
-  - `c.EnableAnnotations()`
-  - `c.IncludeXmlComments()` cho cả 3 XML file (Api, Application, Domain)
-  - `c.UseInlineDefinitionsForEnums()`
-- Package `Swashbuckle.AspNetCore.Annotations` phải được tham chiếu trong `Sales.Api.csproj`.
+  - `/// <summary>` – mô tả ngắn (1 dòng, hiển thị làm title trong Scalar)
+  - `/// <remarks>` – mô tả chi tiết nghiệp vụ, điều kiện, quy tắc
+  - `/// <param name="...">` – mô tả tham số (nếu có route/query param)
+  - `/// <response code="xxx">` – mô tả từng HTTP status code có thể trả về
+  - `[ProducesResponseType(StatusCodes.StatusXXX)]` – attribute chuẩn ASP.NET Core (thay `[SwaggerResponse]`)
+- `Program.cs` phải cấu hình:
+  - `builder.Services.AddOpenApi(options => { ... })` với `AddDocumentTransformer` để set Title/Version/Description
+  - `app.MapOpenApi()` – endpoint tạo file JSON tại `/openapi/v1.json`
+  - `app.MapScalarApiReference(options => { options.Title = ...; options.Theme = ScalarTheme.DeepSpace; })` – UI tại `/scalar/v1`
+- **Không** dùng `[SwaggerOperation]`, `[SwaggerResponse]`, `[ApiExplorerSettings]` của Swashbuckle.
+- Package `Scalar.AspNetCore` phải được tham chiếu trong `Sales.Api.csproj`.
 
 ---
+
 
 ## 5. Database – EF Core & Migration
 
@@ -148,3 +152,8 @@ namespace Sales.Domain.Entities.Sample
 - Bắt đầu bằng **Phase 1** (BA Review & Concept): Đọc SRS/PRD, đặt câu hỏi phản biện, chốt phương án và tạo file concept-{module}-{feature}.md.
 - TUYỆT ĐỐI không được đi thẳng vào lập Kế hoạch triển khai (Implementation Plan) hay viết code mà bỏ qua các bước tạo tài liệu Concept, Spec, và Design.
 - Quan trọng: Sau mỗi bước (phase) của quy trình, BẮT BUỘC phải dừng lại, xuất kết quả để user review và phải đợi user confirm thì mới được làm bước tiếp theo.
+
+## 11. Quy tắc Frontend & Responsive Design
+- **Luôn chú trọng Responsive:** Khi phát triển tính năng mới trên Frontend (React/Ant Design), bắt buộc phải thiết kế giao diện tương thích với mọi kích thước màn hình (mobile, tablet, desktop).
+- **Tuyệt đối không dùng width cứng (fixed width):** Không gán width cứng (ví dụ `width={700}`, `width: 130px`) cho Modal, Input, hay Container trừ khi thật sự cần thiết. Khuyến khích dùng `width: '100%'` kết hợp với hệ thống lưới (Grid system).
+- **Sử dụng Grid thay vì Space cho Layout phức tạp:** Đối với các Form chứa nhiều trường trên cùng một hàng (như `Form.List`), hãy sử dụng `<Row>` và `<Col>` kết hợp với responsive props (như `xs={24}`, `sm={12}`, `md={6}`) để các phần tử tự động co giãn thay vì dùng `<Space>` với thuộc tính `display: flex` dễ gây tràn (overflow) giao diện.

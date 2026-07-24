@@ -71,6 +71,9 @@ namespace Sales.Application.Services
             }
 
             var category = _mapper.Map<Category>(dto);
+            category.Id = Guid.NewGuid();
+            category.Status = true;
+            category.CreatedDate = DateTime.UtcNow;
             await _unitOfWork.Repository<Category>().InsertAsync(category);
             await _unitOfWork.SaveChangesAsync();
             return _mapper.Map<CategoryDto>(category);

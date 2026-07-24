@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Table, Button, Space, Card, Tag, Modal, Form, Input, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Card, Tag, Modal, Form, Input, message, Drawer, Descriptions } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import {
   useGetUnitsQuery,
   useCreateUnitMutation,
@@ -23,6 +23,7 @@ export const UnitList: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [viewingUnit, setViewingUnit] = useState<Unit | null>(null);
   const [form] = Form.useForm();
 
   const showModal = (unit?: Unit) => {
@@ -57,7 +58,9 @@ export const UnitList: React.FC = () => {
         message.success('Thêm đơn vị tính thành công.');
       }
       setIsModalOpen(false);
-    } catch (error) {}
+    } catch (error: any) {
+      message.error(error?.data?.message || 'Có lỗi xảy ra vui lòng thử lại!');
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -71,7 +74,9 @@ export const UnitList: React.FC = () => {
         try {
           await deleteUnit(id).unwrap();
           message.success('Xóa đơn vị tính thành công.');
-        } catch (error) {}
+        } catch (error: any) {
+          message.error(error?.data?.message || 'Không thể xóa đơn vị tính này!');
+        }
       },
     });
   };
@@ -107,6 +112,7 @@ export const UnitList: React.FC = () => {
       key: 'actions',
       render: (_: any, record: Unit) => (
         <Space size="middle">
+          <Button type="text" icon={<EyeOutlined />} onClick={() => setViewingUnit(record)} />
           <Button type="text" icon={<EditOutlined />} onClick={() => showModal(record)} />
           <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
@@ -152,19 +158,19 @@ export const UnitList: React.FC = () => {
       >
         <Form form={form} layout="vertical" onFinish={handleFinish}>
           <Form.Item
-            name="name"
-            label="Tên ĐVT"
-            rules={[{ required: true, message: 'Vui lòng nhập tên đơn vị tính' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
             name="code"
             label="Mã ĐVT"
             rules={[{ required: true, message: 'Vui lòng nhập mã đơn vị tính' }]}
           >
             <Input disabled={!!editingUnit} />
+          </Form.Item>
+
+          <Form.Item
+            name="name"
+            label="Tên ĐVT"
+            rules={[{ required: true, message: 'Vui lòng nhập tên đơn vị tính' }]}
+          >
+            <Input />
           </Form.Item>
 
           <Form.Item name="description" label="Mô tả">
@@ -181,6 +187,28 @@ export const UnitList: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Drawer
+        title="Chi tiết Đơn vị tính"
+        width={500}
+        onClose={() => setViewingUnit(null)}
+        open={!!viewingUnit}
+      >
+        {viewingUnit && (
+          <Descriptions bordered column={1}>
+            <Descriptions.Item label="Mã ĐVT"><strong>{viewingUnit.code}</strong></Descriptions.Item>
+            <Descriptions.Item label="Tên ĐVT"><strong>{viewingUnit.name}</strong></Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag color={viewingUnit.status ? 'green' : 'red'}>
+                {viewingUnit.status ? 'Hoạt động' : 'Khóa'}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Mô tả">
+              {viewingUnit.description || '-'}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
     </div>
   );
 };

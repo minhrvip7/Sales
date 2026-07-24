@@ -69,8 +69,10 @@ export interface Product {
   cost: number;
   stockQuantity: number;
   categoryId: string;
+  categoryName?: string;
   category?: Category;
   baseUnitId: string;
+  baseUnitName?: string;
   baseUnit?: Unit;
   status: boolean;
   createdDate: string;

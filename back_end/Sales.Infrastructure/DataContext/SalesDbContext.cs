@@ -24,7 +24,8 @@ namespace Sales.Infrastructure.DataContext
         public DbSet<InventoryBalance> InventoryBalances { get; set; } = null!;
         public DbSet<InventoryTransaction> InventoryTransactions { get; set; } = null!;
         public DbSet<ProductCost> ProductCosts { get; set; } = null!;
-
+        public DbSet<GoodsReceipt> GoodsReceipts { get; set; } = null!;
+        public DbSet<GoodsReceiptLine> GoodsReceiptLines { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -342,6 +343,50 @@ namespace Sales.Infrastructure.DataContext
                 entity.HasOne(d => d.Product)
                     .WithMany()
                     .HasForeignKey(d => d.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            // ──────────────────────────────────────────
+            // GoodsReceipt Configuration
+            // ──────────────────────────────────────────
+            modelBuilder.Entity<GoodsReceipt>(entity =>
+            {
+                entity.ToTable("GoodsReceipts", t => t.HasComment("Bảng lưu trữ thông tin phiếu nhập kho (Header)."));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasComment("Khóa chính (UUID).");
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50).HasComment("Mã phiếu nhập kho (Ví dụ: GR-YYMM-00001).");
+                entity.Property(e => e.Type).HasConversion<int>().HasComment("Loại phiếu: 1=Purchase, 2=Return, 3=Transfer.");
+                entity.Property(e => e.ReferenceCode).HasMaxLength(50).HasComment("Mã chứng từ gốc để hiển thị nhanh.");
+                entity.Property(e => e.Notes).HasMaxLength(500).HasComment("Ghi chú cho phiếu nhập kho.");
+                entity.Property(e => e.Status).HasConversion<int>().HasComment("Trạng thái: 0=Draft, 1=Completed, 2=Cancelled.");
+                entity.Property(e => e.TotalQuantity).HasPrecision(18, 2).HasComment("Tổng số lượng thực tế của tất cả các dòng sản phẩm.");
+                entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasComment("Cờ xóa mềm.");
+                
+                entity.HasIndex(e => e.Code).IsUnique();
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            // ──────────────────────────────────────────
+            // GoodsReceiptLine Configuration
+            // ──────────────────────────────────────────
+            modelBuilder.Entity<GoodsReceiptLine>(entity =>
+            {
+                entity.ToTable("GoodsReceiptLines", t => t.HasComment("Dòng chi tiết trong phiếu nhập kho."));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasComment("Khóa chính (UUID).");
+                entity.Property(e => e.GoodsReceiptId).HasComment("FK → GoodsReceipts.");
+                entity.Property(e => e.ProductId).HasComment("FK → Products.");
+                entity.Property(e => e.UoMId).HasComment("FK → Units.");
+                entity.Property(e => e.ConversionRate).HasPrecision(18, 4).HasComment("Tỷ lệ quy đổi so với đơn vị cơ bản lúc nhập.");
+                entity.Property(e => e.ExpectedQuantity).HasPrecision(18, 2).HasComment("Số lượng dự kiến từ chứng từ gốc.");
+                entity.Property(e => e.ActualQuantity).HasPrecision(18, 2).HasComment("Số lượng thực tế nhập kho.");
+                entity.Property(e => e.Notes).HasMaxLength(250).HasComment("Ghi chú tại dòng.");
+                entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasComment("Cờ xóa mềm.");
+                
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(d => d.GoodsReceipt)
+                    .WithMany(p => p.Lines)
+                    .HasForeignKey(d => d.GoodsReceiptId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

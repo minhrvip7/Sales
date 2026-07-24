@@ -52,3 +52,13 @@ body {
 .ant-menu-item-selected {
   background-color: #1890ff !important;
 }
+
+/* Cải thiện khả năng đọc của input khi bị disabled */
+.ant-input[disabled],
+.ant-input-disabled,
+.ant-select-disabled .ant-select-selection-item,
+.ant-input-number-disabled .ant-input-number-input {
+  color: rgba(0, 0, 0, 0.85) !important;
+  background-color: #f5f5f5 !important;
+  cursor: not-allowed !important;
+}

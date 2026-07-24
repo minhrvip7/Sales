@@ -97,10 +97,21 @@ namespace Sales.Application.Services
                 throw new ArgumentException($"Không tìm thấy đơn vị tính với Id: {dto.BaseUnitId}");
             }
 
+            // Validate Code uniqueness
+            var existingCode = await _unitOfWork.Repository<Product>().FirstOrDefaultAsync(p => p.Code == dto.Code);
+            if (existingCode != null)
+            {
+                throw new ArgumentException($"Mã sản phẩm '{dto.Code}' đã tồn tại.");
+            }
+
             // Validate Barcode uniqueness
             await ValidateBarcodeUniqueAsync(dto.Barcode);
 
             var product = _mapper.Map<Product>(dto);
+            product.Id = Guid.NewGuid();
+            product.Status = true;
+            product.CreatedDate = DateTime.UtcNow;
+            product.StockQuantity = 0;
             
             // Validate and map conversions
             var conversions = new List<ProductUnitConversion>();
@@ -187,18 +198,24 @@ namespace Sales.Application.Services
                 }
             }
 
+            // Validate Code uniqueness
+            var existingCode = await _unitOfWork.Repository<Product>().FirstOrDefaultAsync(p => p.Code == dto.Code && p.Id != id);
+            if (existingCode != null)
+            {
+                throw new ArgumentException($"Mã sản phẩm '{dto.Code}' đã được sử dụng bởi sản phẩm khác.");
+            }
+
             // Validate Barcode uniqueness
             await ValidateBarcodeUniqueAsync(dto.Barcode, id);
 
-            // Clear existing conversions in DbContext
-            var existingConversions = await _unitOfWork.Repository<ProductUnitConversion>().GetAsync(c => c.ProductId == id);
-            if (existingConversions != null && existingConversions.Any())
+            // 1. Soft-delete existing conversions correctly
+            foreach (var existing in product.Conversions.ToList())
             {
-                _unitOfWork.Repository<ProductUnitConversion>().DeleteRange(existingConversions);
+                existing.IsDeleted = true;
+                existing.DeletedDate = DateTime.UtcNow;
             }
 
-            // Validate and map new conversions
-            var conversions = new List<ProductUnitConversion>();
+            // 2. Validate and map new conversions
             var seenUnits = new HashSet<Guid>();
             foreach (var convDto in dto.Conversions)
             {
@@ -216,7 +233,6 @@ namespace Sales.Application.Services
                     throw new ArgumentException("Hệ số quy đổi phải lớn hơn 0.");
                 }
 
-                // Verify alternative unit exists
                 var altUnit = await _unitOfWork.Repository<Unit>().FirstOrDefaultAsync(u => u.Id == convDto.AlternativeUnitId);
                 if (altUnit == null)
                 {
@@ -225,7 +241,7 @@ namespace Sales.Application.Services
 
                 await ValidateBarcodeUniqueAsync(convDto.Barcode, id);
 
-                conversions.Add(new ProductUnitConversion
+                var newConv = new ProductUnitConversion
                 {
                     Id = Guid.NewGuid(),
                     ProductId = product.Id,
@@ -233,15 +249,30 @@ namespace Sales.Application.Services
                     ConversionRate = convDto.ConversionRate,
                     Barcode = convDto.Barcode,
                     Price = convDto.Price
-                });
+                };
+
+                await _unitOfWork.Repository<ProductUnitConversion>().InsertAsync(newConv);
             }
 
             _mapper.Map(dto, product);
             product.UpdatedDate = DateTime.UtcNow;
-            product.Conversions = conversions;
 
-            _unitOfWork.Repository<Product>().Update(product);
-            await _unitOfWork.SaveChangesAsync();
+            // Do not call Update(product) because it will mark the newly added conversions as Modified (since they have a non-empty Guid),
+            // which causes DbUpdateConcurrencyException. The product is already tracked, so SaveChanges handles it.
+            
+            try
+            {
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                var entry = ex.Entries.FirstOrDefault();
+                if (entry != null && entry.Entity is ProductUnitConversion puc)
+                {
+                    throw new Exception($"Concurrency exception on ProductUnitConversion with state {entry.State}, Id={puc.Id}, ProductId={puc.ProductId}, IsDeleted={puc.IsDeleted}", ex);
+                }
+                throw;
+            }
             return true;
         }
 

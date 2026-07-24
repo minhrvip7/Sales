@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Table, Button, Space, Card, Tag, Modal, Form, Input, InputNumber, message, Row, Col, Divider } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Card, Tag, Modal, Form, Input, InputNumber, message, Row, Col, Divider, Drawer, Descriptions } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import {
   useGetProductsQuery,
   useCreateProductMutation,
@@ -26,6 +26,7 @@ export const ProductList: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [form] = Form.useForm();
 
   const showModal = (product?: Product) => {
@@ -68,8 +69,8 @@ export const ProductList: React.FC = () => {
         message.success('Thêm sản phẩm thành công.');
       }
       setIsModalOpen(false);
-    } catch (error) {
-      // Axios interceptor handles global message, but we can do extra logic here
+    } catch (error: any) {
+      message.error(error?.data?.message || 'Có lỗi xảy ra vui lòng thử lại!');
     }
   };
 
@@ -84,7 +85,9 @@ export const ProductList: React.FC = () => {
         try {
           await deleteProduct(id).unwrap();
           message.success('Xóa sản phẩm thành công.');
-        } catch (error) {}
+        } catch (error: any) {
+          message.error(error?.data?.message || 'Không thể xóa sản phẩm này!');
+        }
       },
     });
   };
@@ -104,12 +107,12 @@ export const ProductList: React.FC = () => {
     {
       title: 'Nhóm',
       key: 'categoryName',
-      render: (_: any, record: Product) => record.category?.name || '-',
+      render: (_: any, record: Product) => record.categoryName || record.category?.name || '-',
     },
     {
       title: 'ĐVT',
       key: 'unitName',
-      render: (_: any, record: Product) => record.baseUnit?.name || '-',
+      render: (_: any, record: Product) => record.baseUnitName || record.baseUnit?.name || '-',
     },
     {
       title: 'Giá bán',
@@ -145,6 +148,7 @@ export const ProductList: React.FC = () => {
       key: 'actions',
       render: (_: any, record: Product) => (
         <Space size="middle">
+          <Button type="text" icon={<EyeOutlined />} onClick={() => setViewingProduct(record)} />
           <Button type="text" icon={<EditOutlined />} onClick={() => showModal(record)} />
           <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
@@ -187,146 +191,165 @@ export const ProductList: React.FC = () => {
         onCancel={handleCancel}
         footer={null}
         destroyOnClose
+        width={1000}
       >
         <Form form={form} layout="vertical" onFinish={handleFinish}>
-          <Form.Item
-            name="name"
-            label="Tên sản phẩm"
-            rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="code"
-            label="Mã sản phẩm"
-            rules={[{ required: true, message: 'Vui lòng nhập mã sản phẩm' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item name="barcode" label="Mã vạch (Barcode)">
-            <Input />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
+          <Row gutter={24}>
+            {/* Left Column: Basic Info */}
+            <Col xs={24} lg={12}>
               <Form.Item
-                name="price"
-                label="Giá bán (₫)"
-                rules={[{ required: true, message: 'Vui lòng nhập giá bán' }]}
+                name="code"
+                label="Mã sản phẩm"
+                rules={[{ required: true, message: 'Vui lòng nhập mã sản phẩm' }]}
               >
-                <InputNumber style={{ width: '100%' }} min={0} />
+                <Input disabled={!!editingProduct} />
               </Form.Item>
+
+              <Form.Item
+                name="name"
+                label="Tên sản phẩm"
+                rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}
+              >
+                <Input />
+              </Form.Item>
+
+              <Form.Item name="barcode" label="Mã vạch (Barcode)">
+                <Input />
+              </Form.Item>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="price"
+                    label="Giá bán (₫)"
+                    rules={[{ required: true, message: 'Vui lòng nhập giá bán' }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={0} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="cost"
+                    label="Giá vốn (₫)"
+                    rules={[{ required: true, message: 'Vui lòng nhập giá vốn' }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={0} />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item name="description" label="Mô tả">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="categoryId"
+                    label="Nhóm sản phẩm"
+                    rules={[{ required: true, message: 'Vui lòng chọn nhóm sản phẩm' }]}
+                  >
+                    <PaginatedSelect 
+                      placeholder="Chọn nhóm"
+                      fetchData={async (page, keyword) => {
+                        const res = await apiClient.get('/category', { params: { pageNumber: page, pageSize: 20, keyword } });
+                        return { data: res.data.data.data, totalPages: res.data.data.totalPages };
+                      }}
+                      valueProp="id"
+                      labelProp="name"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="baseUnitId"
+                    label="Đơn vị tính chính"
+                    rules={[{ required: true, message: 'Vui lòng chọn đơn vị tính chính' }]}
+                    extra={editingProduct?.hasTransactions ? <span style={{ color: 'orange', fontSize: '12px' }}>Đã có giao dịch, không thể sửa đơn vị tính chính.</span> : null}
+                  >
+                    <PaginatedSelect 
+                      placeholder="Chọn đơn vị" 
+                      disabled={editingProduct?.hasTransactions}
+                      fetchData={async (page, keyword) => {
+                        const res = await apiClient.get('/unit', { params: { pageNumber: page, pageSize: 20, keyword } });
+                        return { data: res.data.data.data, totalPages: res.data.data.totalPages };
+                      }}
+                      valueProp="id"
+                      labelProp="name"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                name="cost"
-                label="Giá vốn (₫)"
-                rules={[{ required: true, message: 'Vui lòng nhập giá vốn' }]}
-              >
-                <InputNumber style={{ width: '100%' }} min={0} />
-              </Form.Item>
+
+            {/* Right Column: Conversions */}
+            <Col xs={24} lg={12}>
+              <Divider style={{ margin: '0 0 12px 0' }} orientation="left">Đơn vị quy đổi</Divider>
+              <Form.List name="conversions">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }) => (
+                      <Row key={key} gutter={8} style={{ marginBottom: 8 }} align="baseline">
+                        <Col xs={24} sm={6}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'alternativeUnitId']}
+                            rules={[{ required: true, message: 'Chọn đơn vị' }]}
+                          >
+                            <PaginatedSelect 
+                              placeholder="Đơn vị" 
+                              style={{ width: '100%' }}
+                              fetchData={async (page, keyword) => {
+                                const res = await apiClient.get('/unit', { params: { pageNumber: page, pageSize: 20, keyword } });
+                                return { data: res.data.data.data, totalPages: res.data.data.totalPages };
+                              }}
+                              valueProp="id"
+                              labelProp="name"
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={5}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'conversionRate']}
+                            rules={[{ required: true, message: 'Nhập hệ số' }]}
+                          >
+                            <InputNumber placeholder="Hệ số (>0)" min={0.0001} style={{ width: '100%' }} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={6}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'barcode']}
+                          >
+                            <Input placeholder="Mã vạch" style={{ width: '100%' }} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={5}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'price']}
+                          >
+                            <InputNumber placeholder="Giá bán" min={0} style={{ width: '100%' }} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={2} style={{ display: 'flex', justifyContent: 'center' }}>
+                          <Button type="text" danger onClick={() => remove(name)} icon={<DeleteOutlined />} />
+                        </Col>
+                      </Row>
+                    ))}
+                    <Form.Item>
+                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                        Thêm Đơn vị quy đổi
+                      </Button>
+                    </Form.Item>
+                  </>
+                )}
+              </Form.List>
             </Col>
           </Row>
 
-          <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="categoryId"
-                label="Nhóm sản phẩm"
-                rules={[{ required: true, message: 'Vui lòng chọn nhóm sản phẩm' }]}
-              >
-                <PaginatedSelect 
-                  placeholder="Chọn nhóm"
-                  fetchData={async (page, keyword) => {
-                    const res = await apiClient.get('/category', { params: { pageNumber: page, pageSize: 20, keyword } });
-                    return { data: res.data.data.data, totalPages: res.data.data.totalPages };
-                  }}
-                  valueProp="id"
-                  labelProp="name"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="baseUnitId"
-                label="Đơn vị tính"
-                rules={[{ required: true, message: 'Vui lòng chọn đơn vị tính' }]}
-                extra={editingProduct?.hasTransactions ? <span style={{ color: 'orange', fontSize: '12px' }}>Đã có giao dịch, không thể sửa đơn vị tính cơ bản.</span> : null}
-              >
-                <PaginatedSelect 
-                  placeholder="Chọn đơn vị" 
-                  disabled={editingProduct?.hasTransactions}
-                  fetchData={async (page, keyword) => {
-                    const res = await apiClient.get('/unit', { params: { pageNumber: page, pageSize: 20, keyword } });
-                    return { data: res.data.data.data, totalPages: res.data.data.totalPages };
-                  }}
-                  valueProp="id"
-                  labelProp="name"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Divider style={{ margin: '12px 0' }}>Đơn vị quy đổi</Divider>
-          <Form.List name="conversions">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name, ...restField }) => (
-                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'alternativeUnitId']}
-                      rules={[{ required: true, message: 'Chọn đơn vị' }]}
-                    >
-                      <PaginatedSelect 
-                        placeholder="Đơn vị" 
-                        style={{ width: 130 }}
-                        fetchData={async (page, keyword) => {
-                          const res = await apiClient.get('/unit', { params: { pageNumber: page, pageSize: 20, keyword } });
-                          return { data: res.data.data.data, totalPages: res.data.data.totalPages };
-                        }}
-                        valueProp="id"
-                        labelProp="name"
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'conversionRate']}
-                      rules={[{ required: true, message: 'Nhập hệ số' }]}
-                    >
-                      <InputNumber placeholder="Hệ số (>0)" min={0.0001} style={{ width: 100 }} />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'barcode']}
-                    >
-                      <Input placeholder="Mã vạch riêng" style={{ width: 120 }} />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'price']}
-                    >
-                      <InputNumber placeholder="Giá bán (₫)" min={0} style={{ width: 120 }} />
-                    </Form.Item>
-                    <Button type="text" danger onClick={() => remove(name)} icon={<DeleteOutlined />} />
-                  </Space>
-                ))}
-                <Form.Item>
-                  <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                    Thêm Đơn vị quy đổi
-                  </Button>
-                </Form.Item>
-              </>
-            )}
-          </Form.List>
-
-          <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
+          <Form.Item style={{ textAlign: 'right', marginBottom: 0, marginTop: 16 }}>
             <Space>
               <Button onClick={handleCancel}>Hủy</Button>
               <Button type="primary" htmlType="submit">
@@ -336,6 +359,56 @@ export const ProductList: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Drawer
+        title="Chi tiết sản phẩm"
+        width={720}
+        onClose={() => setViewingProduct(null)}
+        open={!!viewingProduct}
+      >
+        {viewingProduct && (
+          <>
+            <Descriptions bordered column={{ xs: 1, sm: 2 }}>
+              <Descriptions.Item label="Mã SP"><strong>{viewingProduct.code}</strong></Descriptions.Item>
+              <Descriptions.Item label="Tên sản phẩm"><strong>{viewingProduct.name}</strong></Descriptions.Item>
+              <Descriptions.Item label="Mã vạch">{viewingProduct.barcode || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Nhóm sản phẩm">{viewingProduct.categoryName || viewingProduct.category?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Đơn vị tính chính">{viewingProduct.baseUnitName || viewingProduct.baseUnit?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                <Tag color={viewingProduct.status ? 'green' : 'red'}>
+                  {viewingProduct.status ? 'Đang bán' : 'Ngừng bán'}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Giá bán">{viewingProduct.price.toLocaleString('vi-VN')} ₫</Descriptions.Item>
+              <Descriptions.Item label="Giá vốn">{viewingProduct.cost.toLocaleString('vi-VN')} ₫</Descriptions.Item>
+              <Descriptions.Item label="Tồn kho">{viewingProduct.stockQuantity}</Descriptions.Item>
+              <Descriptions.Item label="Đã có GD">{viewingProduct.hasTransactions ? 'Có' : 'Không'}</Descriptions.Item>
+              <Descriptions.Item label="Mô tả" span={2}>
+                {viewingProduct.description || '-'}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {viewingProduct.conversions && viewingProduct.conversions.length > 0 && (
+              <>
+                <Divider orientation="left">Đơn vị quy đổi</Divider>
+                <Table
+                  dataSource={viewingProduct.conversions}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  bordered
+                  columns={[
+                    { title: 'Đơn vị', dataIndex: 'alternativeUnitName', key: 'alternativeUnitName' },
+                    { title: 'Hệ số', dataIndex: 'conversionRate', key: 'conversionRate' },
+                    { title: 'Mã vạch', dataIndex: 'barcode', key: 'barcode', render: (val) => val || '-' },
+                    { title: 'Giá bán', dataIndex: 'price', key: 'price', render: (val) => val ? `${val.toLocaleString('vi-VN')} ₫` : '-' },
+                  ]}
+                />
+              </>
+            )}
+          </>
+        )}
+      </Drawer>
     </div>
   );
 };

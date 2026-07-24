@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Table, Button, Space, Card, Tag, Modal, Form, Input, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Card, Tag, Modal, Form, Input, message, Drawer, Descriptions } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import {
   useGetCategoriesQuery,
   useCreateCategoryMutation,
@@ -23,6 +23,7 @@ export const CategoryList: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
   const [form] = Form.useForm();
 
   const showModal = (category?: Category) => {
@@ -57,7 +58,9 @@ export const CategoryList: React.FC = () => {
         message.success('Thêm nhóm sản phẩm thành công.');
       }
       setIsModalOpen(false);
-    } catch (error) {}
+    } catch (error: any) {
+      message.error(error?.data?.message || 'Có lỗi xảy ra vui lòng thử lại!');
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -71,7 +74,9 @@ export const CategoryList: React.FC = () => {
         try {
           await deleteCategory(id).unwrap();
           message.success('Xóa nhóm sản phẩm thành công.');
-        } catch (error) {}
+        } catch (error: any) {
+          message.error(error?.data?.message || 'Không thể xóa nhóm sản phẩm này!');
+        }
       },
     });
   };
@@ -107,6 +112,7 @@ export const CategoryList: React.FC = () => {
       key: 'actions',
       render: (_: any, record: Category) => (
         <Space size="middle">
+          <Button type="text" icon={<EyeOutlined />} onClick={() => setViewingCategory(record)} />
           <Button type="text" icon={<EditOutlined />} onClick={() => showModal(record)} />
           <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
         </Space>
@@ -152,19 +158,19 @@ export const CategoryList: React.FC = () => {
       >
         <Form form={form} layout="vertical" onFinish={handleFinish}>
           <Form.Item
-            name="name"
-            label="Tên nhóm"
-            rules={[{ required: true, message: 'Vui lòng nhập tên nhóm sản phẩm' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
             name="code"
             label="Mã nhóm"
             rules={[{ required: true, message: 'Vui lòng nhập mã nhóm sản phẩm' }]}
           >
             <Input disabled={!!editingCategory} />
+          </Form.Item>
+
+          <Form.Item
+            name="name"
+            label="Tên nhóm"
+            rules={[{ required: true, message: 'Vui lòng nhập tên nhóm sản phẩm' }]}
+          >
+            <Input />
           </Form.Item>
 
           <Form.Item name="description" label="Mô tả">
@@ -181,6 +187,28 @@ export const CategoryList: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Drawer
+        title="Chi tiết Nhóm sản phẩm"
+        width={500}
+        onClose={() => setViewingCategory(null)}
+        open={!!viewingCategory}
+      >
+        {viewingCategory && (
+          <Descriptions bordered column={1}>
+            <Descriptions.Item label="Mã nhóm"><strong>{viewingCategory.code}</strong></Descriptions.Item>
+            <Descriptions.Item label="Tên nhóm"><strong>{viewingCategory.name}</strong></Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag color={viewingCategory.status ? 'green' : 'red'}>
+                {viewingCategory.status ? 'Hoạt động' : 'Khóa'}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Mô tả">
+              {viewingCategory.description || '-'}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
     </div>
   );
 };

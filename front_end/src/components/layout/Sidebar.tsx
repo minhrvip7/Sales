@@ -8,6 +8,7 @@ import {
   AppstoreOutlined,
   BlockOutlined,
   DatabaseOutlined,
+  ImportOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -46,6 +47,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       key: '/inventory',
       icon: <DatabaseOutlined />,
       label: 'Tồn kho',
+    },
+    {
+      key: '/inventory/goods-receipt',
+      icon: <ImportOutlined />,
+      label: 'Nhập kho',
     },
     {
       key: '/orders',

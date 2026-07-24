@@ -3,6 +3,7 @@ using Sales.Application.DTOs.Product;
 using Sales.Application.DTOs.Order;
 using Sales.Application.DTOs.Category;
 using Sales.Application.DTOs.Unit;
+using Sales.Application.DTOs.Inventory.GoodsReceipt;
 using Sales.Domain.Entities.Product;
 using Sales.Domain.Entities.Order;
 
@@ -12,6 +13,20 @@ namespace Sales.Application.Mappings
     {
         public MappingProfile()
         {
+            // GoodsReceipt mappings
+            CreateMap<Sales.Domain.Entities.Inventory.GoodsReceipt, GoodsReceiptDto>();
+            CreateMap<Sales.Domain.Entities.Inventory.GoodsReceipt, GoodsReceiptSummaryDto>();
+            CreateMap<CreateGoodsReceiptDto, Sales.Domain.Entities.Inventory.GoodsReceipt>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedDate, opt => opt.Ignore())
+                .ForMember(dest => dest.TotalQuantity, opt => opt.Ignore());
+
+            CreateMap<Sales.Domain.Entities.Inventory.GoodsReceiptLine, GoodsReceiptLineDto>();
+            CreateMap<CreateGoodsReceiptLineDto, Sales.Domain.Entities.Inventory.GoodsReceiptLine>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedDate, opt => opt.Ignore());
+
             // Product mappings
             CreateMap<Product, ProductDto>()
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
@@ -19,10 +34,10 @@ namespace Sales.Application.Mappings
                 .ForMember(dest => dest.Conversions, opt => opt.MapFrom(src => src.Conversions));
             
             CreateMap<CreateProductDto, Product>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()))
-                .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => true))
-                .ForMember(dest => dest.CreatedDate, opt => opt.MapFrom(_ => DateTime.UtcNow))
-                .ForMember(dest => dest.StockQuantity, opt => opt.MapFrom(_ => 0))
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedDate, opt => opt.Ignore())
+                .ForMember(dest => dest.StockQuantity, opt => opt.Ignore())
                 .ForMember(dest => dest.Conversions, opt => opt.Ignore());
 
             CreateMap<ProductUnitConversion, ProductUnitConversionDto>()
@@ -43,16 +58,16 @@ namespace Sales.Application.Mappings
             // Category mappings
             CreateMap<Category, CategoryDto>();
             CreateMap<CreateCategoryDto, Category>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()))
-                .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => true))
-                .ForMember(dest => dest.CreatedDate, opt => opt.MapFrom(_ => DateTime.UtcNow));
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedDate, opt => opt.Ignore());
 
             // Unit mappings
             CreateMap<Unit, UnitDto>();
             CreateMap<CreateUnitDto, Unit>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()))
-                .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => true))
-                .ForMember(dest => dest.CreatedDate, opt => opt.MapFrom(_ => DateTime.UtcNow));
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedDate, opt => opt.Ignore());
         }
     }
 }

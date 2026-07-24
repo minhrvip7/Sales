@@ -71,6 +71,9 @@ namespace Sales.Application.Services
             }
 
             var unit = _mapper.Map<Unit>(dto);
+            unit.Id = Guid.NewGuid();
+            unit.Status = true;
+            unit.CreatedDate = DateTime.UtcNow;
             await _unitOfWork.Repository<Unit>().InsertAsync(unit);
             await _unitOfWork.SaveChangesAsync();
             return _mapper.Map<UnitDto>(unit);

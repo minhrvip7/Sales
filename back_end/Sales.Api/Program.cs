@@ -3,6 +3,7 @@ using Sales.Api.Middlewares;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,34 +24,16 @@ builder.Services.AddControllers()
         options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
     });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+// Cau hinh OpenAPI native (thay the Swashbuckle)
+builder.Services.AddOpenApi(options =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    options.AddDocumentTransformer((doc, context, ct) =>
     {
-        Title = "Evo Sales API",
-        Version = "v1",
-        Description = "API quản lý bán hàng: sản phẩm, nhóm hàng, đơn vị tính, đơn hàng và khách hàng."
+        doc.Info.Title = "Evo Sales API";
+        doc.Info.Version = "v1";
+        doc.Info.Description = "API quan ly ban hang: san pham, nhom hang, don vi tinh, don hang va kho hang.";
+        return Task.CompletedTask;
     });
-
-    // Bật hỗ trợ [SwaggerOperation], [SwaggerResponse] attribute
-    c.EnableAnnotations();
-
-    // Load XML comment từ Sales.Api
-    var apiXml = Path.Combine(AppContext.BaseDirectory, "Sales.Api.xml");
-    if (File.Exists(apiXml)) c.IncludeXmlComments(apiXml);
-
-    // Load XML comment từ Sales.Application (DTOs)
-    var appXml = Path.Combine(AppContext.BaseDirectory, "Sales.Application.xml");
-    if (File.Exists(appXml)) c.IncludeXmlComments(appXml);
-
-    // Load XML comment từ Sales.Domain (Entities, Enums)
-    var domainXml = Path.Combine(AppContext.BaseDirectory, "Sales.Domain.xml");
-    if (File.Exists(domainXml)) c.IncludeXmlComments(domainXml);
-
-    // Hiển thị enum dưới dạng tên string + mô tả thay vì số nguyên
-    c.UseInlineDefinitionsForEnums();
 });
 
 // Add CORS Policy
@@ -71,10 +54,16 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    // Endpoint tao OpenAPI document JSON: GET /openapi/v1.json
+    app.MapOpenApi();
+
+    // Scalar UI - giao dien API documentation hien dai
+    // Truy cap tai: http://localhost:5000/scalar/v1
+    app.MapScalarApiReference(options =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Evo Sales API v1");
+        options.Title = "Evo Sales API";
+        options.Theme = ScalarTheme.DeepSpace;
+        options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
     });
 }
 
@@ -90,4 +79,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
